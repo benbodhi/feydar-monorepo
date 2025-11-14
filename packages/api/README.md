@@ -68,14 +68,20 @@ pnpm build && pnpm start
 
 ## Environment Variables
 
+**Required:**
 - `DATABASE_URL` - PostgreSQL connection string (required)
+- `ALCHEMY_API_KEY` - Alchemy API key for Base mainnet and Ethereum mainnet (required for price data from Uniswap V4 pools)
+
+**Recommended:**
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
-- `CORS_ORIGIN` - Allowed CORS origin (default: *)
-- `ALCHEMY_API_KEY` - Alchemy API key for Base mainnet and Ethereum mainnet (required for price data from Uniswap V4 pools)
+- `CORS_ORIGIN` - Allowed CORS origin (default: `*`)
+
+**Optional:**
 - `FEY_TOKEN_ADDRESS` - FEY token contract address (optional, used for price calculations in FEY)
 - `UNISWAP_V4_POOL_MANAGER` - Uniswap V4 PoolManager address (default: `0x498581ff718922c3f8e6a244956af099b2652b2b`)
 - `UNISWAP_V4_STATE_VIEW` - Uniswap V4 StateView address (default: `0xa3c0c9b65bad0b08107aa264b0f3db444b867a71`)
+- `PRISMA_LOG_QUERIES` - Set to `true` to enable Prisma query logging in development (default: disabled)
 
 ## Uniswap V4 Contract Addresses
 

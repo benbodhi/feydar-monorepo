@@ -158,11 +158,23 @@ For services in the same Railway project, always use **Private Network**.
 7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm start`
    - **Note:** Railway will automatically run `pnpm install` before the build command. The build step compiles TypeScript, then the start command runs the server.
 8. Go to **"Variables"** tab and add environment variables:
+   
+   **Required:**
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
-   - `PORT=3001`
-   - `NODE_ENV=production`
-   - `CORS_ORIGIN` (your webapp URL)
    - `ALCHEMY_API_KEY` (required for price data from Uniswap V4 pools)
+   
+   **Recommended:**
+   - `PORT=3001` (defaults to 3001 if not set)
+   - `NODE_ENV=production`
+   - `CORS_ORIGIN` (your webapp URL, e.g., `https://your-webapp.railway.app`)
+   
+   **Optional:**
+   - `FEY_TOKEN_ADDRESS` (FEY token contract address, used for price calculations in FEY)
+   - `UNISWAP_V4_POOL_MANAGER` (defaults to `0x498581ff718922c3f8e6a244956af099b2652b2b`)
+   - `UNISWAP_V4_STATE_VIEW` (defaults to `0xa3c0c9b65bad0b08107aa264b0f3db444b867a71`)
+   - `PRISMA_LOG_QUERIES=true` (optional, enables Prisma query logging in development)
+   
+   **Note:** Railway will automatically detect and suggest these variables from your source code. You can use the "Suggested Variables" feature to add them quickly.
 
 ### 4. Webapp Service
 
