@@ -54,23 +54,7 @@ pnpm prisma:migrate dev
 cd ../..
 ```
 
-### 6. (Optional) Backfill Historical Deployments
-
-Before starting the bot, you can populate the database with all historical token deployments:
-
-```bash
-cd packages/bot
-pnpm backfill
-```
-
-This will:
-- Fetch all historical `TokenCreated` events from block 38141030 (default, can be overridden)
-- Only add deployments that aren't already in the database (safe to run multiple times)
-- Show progress and statistics
-
-**Note:** This can take a while depending on how many deployments exist. The script processes in batches and shows progress. You can run this in the background or let it complete before starting the bot.
-
-### 7. Create Environment Files
+### 6. Create Environment Files
 
 **Create `packages/bot/.env`:**
 ```env
@@ -98,6 +82,24 @@ ALCHEMY_API_KEY=your_alchemy_api_key_here
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_WS_URL=ws://localhost:3001
 ```
+
+### 7. (Optional) Backfill Historical Deployments
+
+Before starting the bot, you can populate the database with all historical token deployments:
+
+```bash
+cd packages/bot
+pnpm backfill
+```
+
+This will:
+- Fetch all historical `TokenCreated` events from block 38141030 (default, can be overridden)
+- Only add deployments that aren't already in the database (safe to run multiple times)
+- Show progress and statistics
+
+**Note:** This can take a while depending on how many deployments exist. The script processes in batches and shows progress. You can run this in the background or let it complete before starting the bot.
+
+**Important:** Make sure you've created the environment files (Step 6) before running the backfiller, as it requires `ALCHEMY_API_KEY` and `DATABASE_URL` to function.
 
 ### 8. Start All Services
 
