@@ -118,6 +118,8 @@ cd packages/webapp && pnpm start
 
 ## Railway Deployment
 
+**Note:** Railway automatically detects `pnpm` from the `packageManager` field in your root `package.json` and will use it for all install/build commands. All commands below use `pnpm` to match your local development setup.
+
 ### 1. Database Setup
 
 Create a PostgreSQL service on Railway.
@@ -136,6 +138,7 @@ For services in the same Railway project, always use **Private Network**.
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/bot`
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `node src/bot.js`
+   - **Note:** Railway will automatically run `pnpm install` before starting. The bot doesn't need a build step, so `node src/bot.js` is sufficient.
 7. Go to **"Variables"** tab and add environment variables:
    - `DISCORD_TOKEN`
    - `DISCORD_CHANNEL_ID`
@@ -152,6 +155,7 @@ For services in the same Railway project, always use **Private Network**.
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/api`
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm build && pnpm start`
+   - **Note:** Railway will automatically run `pnpm install` before the start command. The build step compiles TypeScript, then start runs the server.
 7. Go to **"Variables"** tab and add environment variables:
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
    - `PORT=3001`
@@ -167,6 +171,7 @@ For services in the same Railway project, always use **Private Network**.
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/webapp`
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm build && pnpm start`
+   - **Note:** Railway will automatically run `pnpm install` before the start command. The build step compiles TypeScript, then start runs the server.
 7. Go to **"Variables"** tab and add environment variables:
    - `NEXT_PUBLIC_API_URL` (API service URL)
    - `NEXT_PUBLIC_WS_URL` (API service WebSocket URL)
@@ -177,7 +182,11 @@ Before starting services, you need to run database migrations. There are two way
 
 **Option A: Using Railway CLI (Recommended)**
 
-1. Install Railway CLI: `npm i -g @railway/cli`
+1. Install Railway CLI (one-time setup, can use npm for global CLI tools):
+   ```bash
+   npm i -g @railway/cli
+   # or if you prefer: pnpm add -g @railway/cli
+   ```
 2. Login: `railway login`
 3. Link to your project: `railway link` (select your project)
 4. Run migrations:
