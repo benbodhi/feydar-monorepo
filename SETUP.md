@@ -120,7 +120,13 @@ cd packages/webapp && pnpm start
 
 ### 1. Database Setup
 
-Create a PostgreSQL service on Railway and note the `DATABASE_URL`.
+Create a PostgreSQL service on Railway.
+
+**Important:** Railway offers two connection methods:
+- **Private Network** (Recommended): Use Railway's service variable references. No egress costs, better performance.
+- **Public Network**: Direct connection URL. Has egress costs and slower performance.
+
+For services in the same Railway project, always use **Private Network**.
 
 ### 2. Bot Service
 
@@ -132,8 +138,8 @@ Create a PostgreSQL service on Railway and note the `DATABASE_URL`.
    - `DISCORD_CHANNEL_ID`
    - `ALCHEMY_API_KEY`
    - `FEY_FACTORY_ADDRESS`
-   - `DATABASE_URL` (from PostgreSQL service)
-   - `API_URL` (from API service URL)
+   - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
+   - `API_URL` (from API service URL, e.g., `https://your-api-service.railway.app`)
 
 ### 3. API Service
 
@@ -141,7 +147,7 @@ Create a PostgreSQL service on Railway and note the `DATABASE_URL`.
 2. Set root directory to `packages/api`
 3. Set start command: `pnpm build && pnpm start`
 4. Add environment variables:
-   - `DATABASE_URL` (from PostgreSQL service)
+   - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
    - `PORT=3001`
    - `NODE_ENV=production`
    - `CORS_ORIGIN` (your webapp URL)
@@ -168,8 +174,10 @@ pnpm prisma:migrate deploy
 
 ### Database connection errors
 - Verify `DATABASE_URL` is correct
-- Ensure PostgreSQL is running
-- Check network/firewall settings
+- If using Private Network, ensure you're using `${{ Postgres.DATABASE_URL }}` variable reference
+- If using Public Network, verify the connection string format
+- Ensure PostgreSQL service is running on Railway
+- Check that all services are in the same Railway project (for Private Network)
 
 ### WebSocket connection errors
 - Verify `NEXT_PUBLIC_WS_URL` matches API service URL
