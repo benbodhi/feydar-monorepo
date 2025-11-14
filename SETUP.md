@@ -164,11 +164,31 @@ For services in the same Railway project, always use **Private Network**.
 
 ### 5. Run Migrations
 
-Before starting services, run migrations:
-```bash
-cd packages/api
-pnpm prisma:migrate deploy
-```
+Before starting services, you need to run database migrations. There are two ways to do this on Railway:
+
+**Option A: Using Railway CLI (Recommended)**
+
+1. Install Railway CLI: `npm i -g @railway/cli`
+2. Login: `railway login`
+3. Link to your project: `railway link` (select your project)
+4. Run migrations:
+   ```bash
+   cd packages/api
+   railway run pnpm prisma:migrate:deploy
+   ```
+
+**Option B: Using Railway Web Interface**
+
+1. Go to your API service in Railway dashboard
+2. Click on "Deployments" tab
+3. Click "Run Command" or "New Deployment"
+4. Set the command to: `pnpm prisma:migrate:deploy`
+5. Make sure the working directory is set to `packages/api`
+6. Run the command
+
+**Note:** Use `prisma migrate deploy` (not `prisma migrate dev`) for production. This applies pending migrations without creating new ones.
+
+After migrations complete, your services will be ready to start.
 
 ## Troubleshooting
 
