@@ -1,0 +1,39 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Deployment {
+  id              Int       @id @default(autoincrement())
+  tokenAddress    String    @unique @db.VarChar(42)
+  name            String    @db.VarChar(500)
+  symbol          String    @db.VarChar(100)
+  totalSupply     String    // Stored as string to preserve BigInt precision
+  deployer        String    @db.VarChar(42)
+  deployerName    String?   @db.VarChar(255)  // Legacy field - kept for backward compatibility
+  deployerBasename String?  @db.VarChar(255)  // Base name (e.g., "benbodhi" from "benbodhi.base.eth")
+  deployerENS     String?   @db.VarChar(255)  // ENS name (e.g., "benbodhi.eth")
+  transactionHash String    @unique @db.VarChar(66)
+  tokenImage      String?   @db.Text
+  feyFee          Int?
+  pairedFee       Int?
+  creatorBps      Int?      // Creator fee in basis points (from TokenRewardAdded event)
+  feyStakersBps   Int?      // FEY Stakers fee in basis points (from TokenRewardAdded event)
+  poolId          String?   @db.VarChar(66)  // Uniswap V3 pool ID (bytes32 as hex)
+  pairedToken      String?   @db.VarChar(42)  // Token address this is paired with (FEY, WETH, etc.)
+  blockNumber     BigInt
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([tokenAddress])
+  @@index([deployer])
+  @@map("deployments")
+}
+

@@ -1,0 +1,26 @@
+{
+  "name": "@feydar/bot",
+  "version": "1.0.0",
+  "description": "Discord bot monitoring FEY Protocol token deployments on Base",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "node --watch src/bot.js",
+    "backfill": "node src/scripts/backfill.js",
+    "test:names": "node src/scripts/testNameResolution.js",
+    "prisma:generate": "cd ../api && pnpm prisma:generate"
+  },
+  "dependencies": {
+    "@feydar/api": "workspace:*",
+    "@feydar/shared": "workspace:*",
+    "@prisma/client": "^5.9.1",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "winston": "^3.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

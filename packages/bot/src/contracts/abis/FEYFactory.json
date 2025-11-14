@@ -1,0 +1,189 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "msgSender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "tokenAdmin",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenImage",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenName",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenSymbol",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenMetadata",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenContext",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "int24",
+        "name": "startingTick",
+        "type": "int24"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "poolHook",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "poolId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pairedToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "locker",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "mevModule",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "extensionsSupply",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address[]",
+        "name": "extensions",
+        "type": "address[]"
+      }
+    ],
+    "name": "TokenCreated",
+    "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "tokenName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenSymbol",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenImage",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenMetadata",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenContext",
+            "type": "string"
+          },
+          {
+            "internalType": "int24",
+            "name": "startingTick",
+            "type": "int24"
+          },
+          {
+            "internalType": "address",
+            "name": "poolHook",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "pairedToken",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "locker",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "mevModule",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "extensionsSupply",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address[]",
+            "name": "extensions",
+            "type": "address[]"
+          }
+        ],
+        "internalType": "struct DeploymentConfig",
+        "name": "deploymentConfig",
+        "type": "tuple"
+      }
+    ],
+    "name": "deployToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
+

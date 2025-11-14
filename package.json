@@ -1,0 +1,20 @@
+{
+  "name": "feydar-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FEY Protocol token deployment monitor - Discord bot, webapp, and Farcaster miniapp",
+  "scripts": {
+    "dev": "concurrently -n bot,api,webapp -c blue,green,yellow \"pnpm --filter bot dev\" \"pnpm --filter api dev\" \"pnpm --filter webapp dev\"",
+    "build": "pnpm --filter shared build && pnpm --filter bot build && pnpm --filter api build && pnpm --filter webapp build",
+    "lint": "pnpm --recursive lint",
+    "typecheck": "pnpm --recursive typecheck"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.22.0",
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
