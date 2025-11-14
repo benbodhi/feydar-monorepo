@@ -138,7 +138,7 @@ For services in the same Railway project, always use **Private Network**.
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/bot`
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `node src/bot.js`
-   - **Note:** Railway will automatically run `pnpm install` before starting. The bot doesn't need a build step, so `node src/bot.js` is sufficient.
+   - **Note:** Railway will automatically run `pnpm install` before starting. The bot doesn't need a build step, so no build command is needed.
 7. Go to **"Variables"** tab and add environment variables:
    - `DISCORD_TOKEN`
    - `DISCORD_CHANNEL_ID`
@@ -154,9 +154,10 @@ For services in the same Railway project, always use **Private Network**.
 3. After the service is created, go to the **Settings** tab
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/api`
-6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm build && pnpm start`
-   - **Note:** Railway will automatically run `pnpm install` before the start command. The build step compiles TypeScript, then start runs the server.
-7. Go to **"Variables"** tab and add environment variables:
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to: `pnpm build`
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm start`
+   - **Note:** Railway will automatically run `pnpm install` before the build command. The build step compiles TypeScript, then the start command runs the server.
+8. Go to **"Variables"** tab and add environment variables:
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
    - `PORT=3001`
    - `NODE_ENV=production`
@@ -170,9 +171,10 @@ For services in the same Railway project, always use **Private Network**.
 3. After the service is created, go to the **Settings** tab
 4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
 5. Set **"Root Directory"** to: `packages/webapp`
-6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm build && pnpm start`
-   - **Note:** Railway will automatically run `pnpm install` before the start command. The build step compiles TypeScript, then start runs the server.
-7. Go to **"Variables"** tab and add environment variables:
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to: `pnpm build`
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm start`
+   - **Note:** Railway will automatically run `pnpm install` before the build command. The build step compiles Next.js, then the start command runs the server.
+8. Go to **"Variables"** tab and add environment variables:
    - `NEXT_PUBLIC_API_URL` (API service URL)
    - `NEXT_PUBLIC_WS_URL` (API service WebSocket URL)
 
