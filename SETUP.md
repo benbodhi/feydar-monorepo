@@ -130,10 +130,12 @@ For services in the same Railway project, always use **Private Network**.
 
 ### 2. Bot Service
 
-1. Create a new service from GitHub repo
-2. Set root directory to `packages/bot`
-3. Set start command: `node src/bot.js`
-4. Add environment variables:
+1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
+2. Select your repository (you'll use the same repo for all services)
+3. After the service is created, go to the **Settings** tab
+4. Under **"Source"** section, set **"Root Directory"** to: `packages/bot`
+5. Under **"Deploy"** section, set **"Start Command"** to: `node src/bot.js`
+6. Go to **"Variables"** tab and add environment variables:
    - `DISCORD_TOKEN`
    - `DISCORD_CHANNEL_ID`
    - `ALCHEMY_API_KEY`
@@ -143,10 +145,12 @@ For services in the same Railway project, always use **Private Network**.
 
 ### 3. API Service
 
-1. Create a new service from GitHub repo
-2. Set root directory to `packages/api`
-3. Set start command: `pnpm build && pnpm start`
-4. Add environment variables:
+1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
+2. Select the **same repository** as the Bot service
+3. After the service is created, go to the **Settings** tab
+4. Under **"Source"** section, set **"Root Directory"** to: `packages/api`
+5. Under **"Deploy"** section, set **"Start Command"** to: `pnpm build && pnpm start`
+6. Go to **"Variables"** tab and add environment variables:
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
    - `PORT=3001`
    - `NODE_ENV=production`
@@ -155,10 +159,12 @@ For services in the same Railway project, always use **Private Network**.
 
 ### 4. Webapp Service
 
-1. Create a new service from GitHub repo
-2. Set root directory to `packages/webapp`
-3. Set start command: `pnpm build && pnpm start`
-4. Add environment variables:
+1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
+2. Select the **same repository** as the other services
+3. After the service is created, go to the **Settings** tab
+4. Under **"Source"** section, set **"Root Directory"** to: `packages/webapp`
+5. Under **"Deploy"** section, set **"Start Command"** to: `pnpm build && pnpm start`
+6. Go to **"Variables"** tab and add environment variables:
    - `NEXT_PUBLIC_API_URL` (API service URL)
    - `NEXT_PUBLIC_WS_URL` (API service WebSocket URL)
 
