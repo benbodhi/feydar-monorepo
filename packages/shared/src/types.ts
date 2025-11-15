@@ -6,9 +6,7 @@ export interface TokenDeployment {
   tokenAddress: string;
   name: string;
   symbol: string;
-  totalSupply: string; // BigInt as string for JSON serialization
   deployer: string;
-  deployerName?: string;
   deployerBasename?: string;  // Base name (e.g., "benbodhi" from "benbodhi.base.eth")
   deployerENS?: string;        // ENS name (e.g., "benbodhi.eth")
   transactionHash: string;

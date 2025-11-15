@@ -614,33 +614,13 @@ class FeydarBot {
                         }
                     }
                     
-                    // Get total supply from the token contract
-                    logger.detail('---');
-                    logger.detail('Fetching token contract data...');
-                    let totalSupply = 0n;
-                    let decimals = 18;
-                    try {
-                        const tokenContract = this.feyContracts.getTokenContract(tokenAddress);
-                        totalSupply = await tokenContract.totalSupply();
-                        logger.detail('Total Supply (raw)', totalSupply.toString());
-                        
-                        try {
-                            decimals = await tokenContract.decimals();
-                            logger.detail('Decimals', decimals.toString());
-                        } catch (e) {
-                            logger.detail('Decimals', '18 (default)');
-                        }
-                    } catch (e) {
-                        logger.warn('Could not fetch total supply from token contract');
-                    }
-                    
+                    // Note: All FEY tokens have 100b supply, so we don't need to fetch it
                     logger.sectionEnd();
                     
                     await handleTokenDeployment({
                         tokenAddress: tokenAddress,
                         name: tokenName,
                         symbol: tokenSymbol,
-                        totalSupply: totalSupply,
                         deployer: tokenAdmin, // tokenAdmin is the deployer/admin
                         transactionHash: log.transactionHash,
                         blockNumber: log.blockNumber,

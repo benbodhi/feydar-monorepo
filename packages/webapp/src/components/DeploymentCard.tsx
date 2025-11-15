@@ -1,5 +1,5 @@
 import { TokenDeployment } from '@feydar/shared/types';
-import { formatSupplyWithCommas, formatIPFSUrl, truncateAddress } from '@feydar/shared/utils';
+import { formatIPFSUrl, truncateAddress } from '@feydar/shared/utils';
 import { createAddressLink } from '@feydar/shared/constants';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TradeLinks } from './TradeLinks';
@@ -110,15 +110,13 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
     }
   };
 
-  // Calculate FDV (Fully Diluted Valuation) = price * (totalSupply / 10^18)
-  // totalSupply is stored as a string (BigInt in wei), so we need to divide by 10^18 to get token units
-  const fdv = priceData?.price && deployment.totalSupply
+  // Calculate FDV (Fully Diluted Valuation) = price * 100b tokens
+  // All FEY tokens have 100b supply
+  const TOTAL_SUPPLY_TOKENS = 100_000_000_000; // 100 billion tokens
+  const fdv = priceData?.price
     ? (() => {
         try {
-          // Convert BigInt string to number and divide by 10^18 to get token units
-          const supplyInWei = parseFloat(deployment.totalSupply);
-          const supplyInTokens = supplyInWei / 1e18;
-          const result = supplyInTokens * priceData.price;
+          const result = TOTAL_SUPPLY_TOKENS * priceData.price;
           // If result is too large or invalid, return null
           if (!isFinite(result) || result <= 0 || result > 1e15) return null; // Cap at quadrillions to avoid display issues
           return result;
@@ -259,11 +257,6 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
               </div>
             </div>
             
-            {/* Total Supply */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium">Total Supply:</span>
-              <span>{formatSupplyWithCommas(deployment.totalSupply)}</span>
-            </div>
           </div>
         )}
 

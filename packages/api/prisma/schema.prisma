@@ -15,9 +15,7 @@ model Deployment {
   tokenAddress    String    @unique @db.VarChar(42)
   name            String    @db.VarChar(500)
   symbol          String    @db.VarChar(100)
-  totalSupply     String    // Stored as string to preserve BigInt precision
   deployer        String    @db.VarChar(42)
-  deployerName    String?   @db.VarChar(255)  // Legacy field - kept for backward compatibility
   deployerBasename String?  @db.VarChar(255)  // Base name (e.g., "benbodhi" from "benbodhi.base.eth")
   deployerENS     String?   @db.VarChar(255)  // ENS name (e.g., "benbodhi.eth")
   transactionHash String    @unique @db.VarChar(66)

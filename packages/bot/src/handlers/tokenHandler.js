@@ -31,7 +31,6 @@ async function handleTokenDeployment({
     tokenAddress,
     name,
     symbol,
-    totalSupply,
     deployer,
     transactionHash,
     blockNumber,
@@ -52,17 +51,18 @@ async function handleTokenDeployment({
         const deployerInfo = await resolveAddressName(deployer, provider);
         logger.detail('Deployer resolved', `Basename: ${deployerInfo.basename || 'none'}, ENS: ${deployerInfo.ens || 'none'}, Display: ${deployerInfo.name}`);
 
+        // All FEY tokens have 100b supply
+        const TOTAL_SUPPLY_TOKENS = 100_000_000_000n; // 100 billion tokens (in wei: 100b * 10^18)
+        const TOTAL_SUPPLY_WEI = TOTAL_SUPPLY_TOKENS * 10n**18n;
+        
         let initialPurchaseText = null;
         if (fullEventData?.tokensReceived) {
             const tokensReceivedBigInt = typeof fullEventData.tokensReceived === 'bigint' 
                 ? fullEventData.tokensReceived 
                 : BigInt(fullEventData.tokensReceived);
-            const totalSupplyBigInt = typeof totalSupply === 'bigint' 
-                ? totalSupply 
-                : BigInt(totalSupply);
             
-            const percentage = totalSupplyBigInt > 0n
-                ? (Number(tokensReceivedBigInt) / Number(totalSupplyBigInt)) * 100
+            const percentage = TOTAL_SUPPLY_WEI > 0n
+                ? (Number(tokensReceivedBigInt) / Number(TOTAL_SUPPLY_WEI)) * 100
                 : 0;
             
             const tokensReceivedFormatted = formatSupplyWithCommas(tokensReceivedBigInt);
@@ -75,9 +75,7 @@ async function handleTokenDeployment({
             tokenAddress,
             name,
             symbol,
-            totalSupply: formatSupplyWithCommas(totalSupply),
             deployer,
-            deployerName: deployerInfo.name,
             deployerBasename: deployerInfo.basename,
             deployerENS: deployerInfo.ens,
             transactionHash,
@@ -92,7 +90,6 @@ async function handleTokenDeployment({
         try {
             const truncatedName = name ? name.substring(0, 500) : '';
             const truncatedSymbol = symbol ? symbol.substring(0, 100) : '';
-            const truncatedDeployerName = deployerInfo.name ? deployerInfo.name.substring(0, 255) : null;
             const truncatedDeployerBasename = deployerInfo.basename ? deployerInfo.basename.substring(0, 255) : null;
             const truncatedDeployerENS = deployerInfo.ens ? deployerInfo.ens.substring(0, 255) : null;
             
@@ -120,14 +117,12 @@ async function handleTokenDeployment({
 
             await prisma.deployment.upsert({
                 where: { tokenAddress },
-                update: {
-                    name: truncatedName,
-                    symbol: truncatedSymbol,
-                    totalSupply: totalSupply.toString(),
-                    deployer,
-                    deployerName: truncatedDeployerName,
-                    deployerBasename: truncatedDeployerBasename,
-                    deployerENS: truncatedDeployerENS,
+                                                update: {
+                                                    name: truncatedName,
+                                                    symbol: truncatedSymbol,
+                                                    deployer,
+                                                    deployerBasename: truncatedDeployerBasename,
+                                                    deployerENS: truncatedDeployerENS,
                     transactionHash,
                     tokenImage: fullEventData?.tokenImage,
                                                     creatorBps,
@@ -140,9 +135,7 @@ async function handleTokenDeployment({
                                                     tokenAddress,
                                                     name: truncatedName,
                                                     symbol: truncatedSymbol,
-                                                    totalSupply: totalSupply.toString(),
                                                     deployer,
-                                                    deployerName: truncatedDeployerName,
                                                     deployerBasename: truncatedDeployerBasename,
                                                     deployerENS: truncatedDeployerENS,
                                                     transactionHash,
@@ -161,9 +154,7 @@ async function handleTokenDeployment({
                     tokenAddress,
                     name,
                     symbol,
-                    totalSupply: totalSupply.toString(),
                     deployer,
-                    deployerName: deployerInfo.name,
                     deployerBasename: deployerInfo.basename,
                     deployerENS: deployerInfo.ens,
                     transactionHash,

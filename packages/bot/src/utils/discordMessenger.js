@@ -6,7 +6,7 @@ const { createTradeLinks } = require('@feydar/shared/constants');
 /**
  * Formats deployer address with all available names (basename, ENS, hex) and explorer links
  */
-function formatDeployerField(address, name, basename, ens) {
+function formatDeployerField(address, basename, ens) {
     try {
         const checksummedAddress = require('ethers').getAddress(address);
         const lines = [];
@@ -26,8 +26,8 @@ function formatDeployerField(address, name, basename, ens) {
         return `${displayName}\n**[Basescan](https://basescan.org/address/${address})**`;
     } catch (error) {
         handleError(error, 'Address Formatting');
-        const displayName = name && name !== address ? `${name} (${address})` : address;
-        return `${displayName}\n**[Basescan](https://basescan.org/address/${address})**`;
+        // Fallback to just the address if formatting fails
+        return `${address}\n**[Basescan](https://basescan.org/address/${address})**`;
     }
 }
 
@@ -63,8 +63,7 @@ function createTokenEmbedFields(tokenData) {
             value: `${tokenData.tokenAddress}\n${explorerLinksRow}`, 
             inline: false 
         },
-        { name: 'Deployer', value: formatDeployerField(tokenData.deployer, tokenData.deployerName, tokenData.deployerBasename, tokenData.deployerENS), inline: false },
-        { name: 'Total Supply', value: tokenData.totalSupply, inline: false }
+        { name: 'Deployer', value: formatDeployerField(tokenData.deployer, tokenData.deployerBasename, tokenData.deployerENS), inline: false }
     ];
 
     if (tokenData.initialPurchase) {

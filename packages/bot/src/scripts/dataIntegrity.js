@@ -265,51 +265,49 @@ class DataIntegrityService {
                 // Fee data not critical for data integrity
             }
 
-            // Get total supply from token contract
-            let totalSupply = 0n;
-            let decimals = 18;
-            try {
-                const tokenContract = this.feyContracts.getTokenContract(tokenAddress);
-                totalSupply = await tokenContract.totalSupply();
-                try {
-                    decimals = await tokenContract.decimals();
-                } catch (e) {
-                    // Default to 18
-                }
-            } catch (e) {
-                logger.warn(`Could not fetch total supply for ${tokenAddress}`);
-            }
+            // Note: All FEY tokens have 100b supply, so we don't need to fetch/store it
 
-            // Always attempt to resolve deployer names (basename and ENS separately)
-            // This ensures names are stored/updated even if they didn't have one before but now they do
-            let deployerName = null;
+            // Resolve deployer names with retry logic for data integrity
+            // We need accurate data, so retry on failure
             let deployerBasename = null;
             let deployerENS = null;
-            try {
-                const deployerInfo = await resolveAddressName(tokenAdmin, this.provider);
-                // Store primary display name if different from address
-                if (deployerInfo.name && deployerInfo.name.toLowerCase() !== tokenAdmin.toLowerCase()) {
-                    deployerName = deployerInfo.name;
-                }
-                // Store basename if available
-                if (deployerInfo.basename) {
-                    deployerBasename = deployerInfo.basename;
-                }
-                // Store ENS if available
-                if (deployerInfo.ens) {
-                    deployerENS = deployerInfo.ens;
-                }
-                // Log summary of resolved names (only if we found something)
-                if (deployerBasename || deployerENS) {
-                    const parts = [];
-                    if (deployerBasename) parts.push(`Basename: ${deployerBasename}`);
-                    if (deployerENS) parts.push(`ENS: ${deployerENS}`);
-                    logger.detail(`  ✓ Resolved deployer names: ${parts.join(', ')}`);
-                }
-            } catch (e) {
-                // Name resolution not critical, continue without name
-                if (process.env.NODE_ENV === 'development') {
-                    logger.detail(`  Name resolution failed for ${tokenAdmin}: ${e.message}`);
+            const MAX_NAME_RESOLUTION_RETRIES = 3;
+            let nameResolutionAttempts = 0;
+            let nameResolutionSuccess = false;
+            
+            while (!nameResolutionSuccess && nameResolutionAttempts < MAX_NAME_RESOLUTION_RETRIES) {
+                try {
+                    nameResolutionAttempts++;
+                    const deployerInfo = await resolveAddressName(tokenAdmin, this.provider);
+                    
+                    // Store basename if available
+                    if (deployerInfo.basename) {
+                        deployerBasename = deployerInfo.basename;
+                    }
+                    // Store ENS if available
+                    if (deployerInfo.ens) {
+                        deployerENS = deployerInfo.ens;
+                    }
+                    
+                    nameResolutionSuccess = true;
+                    
+                    // Log summary of resolved names (only if we found something)
+                    if (deployerBasename || deployerENS) {
+                        const parts = [];
+                        if (deployerBasename) parts.push(`Basename: ${deployerBasename}`);
+                        if (deployerENS) parts.push(`ENS: ${deployerENS}`);
+                        logger.detail(`  ✓ Resolved deployer names: ${parts.join(', ')}`);
+                    }
+                } catch (e) {
+                    if (nameResolutionAttempts < MAX_NAME_RESOLUTION_RETRIES) {
+                        // Wait before retry (exponential backoff)
+                        const retryDelay = 1000 * Math.pow(2, nameResolutionAttempts - 1);
+                        logger.warn(`  Name resolution failed for ${tokenAdmin} (attempt ${nameResolutionAttempts}/${MAX_NAME_RESOLUTION_RETRIES}): ${e.message}. Retrying in ${retryDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    } else {
+                        // Final attempt failed - log but continue (names will be null, which is accurate)
+                        logger.warn(`  Name resolution failed for ${tokenAdmin} after ${MAX_NAME_RESOLUTION_RETRIES} attempts: ${e.message}`);
+                    }
                 }
             }
 
@@ -319,9 +317,11 @@ class DataIntegrityService {
                 const block = await this.provider.getBlock(log.blockNumber);
                 if (block && block.timestamp) {
                     createdAt = new Date(Number(block.timestamp) * 1000);
+                } else {
+                    logger.warn(`Block ${log.blockNumber} has no timestamp, using current time as fallback`);
                 }
             } catch (e) {
-                logger.warn(`Could not fetch block timestamp for block ${log.blockNumber}, using current time as fallback`);
+                logger.warn(`Could not fetch block timestamp for block ${log.blockNumber}: ${e.message}, using current time as fallback`);
             }
 
             // Format poolId as hex string (bytes32)
@@ -340,9 +340,7 @@ class DataIntegrityService {
                 // Truncate to fit database column limits (safety measure)
                 name: tokenName ? tokenName.substring(0, 500) : '',
                 symbol: tokenSymbol ? tokenSymbol.substring(0, 100) : '',
-                totalSupply: totalSupply.toString(),
                 deployer: ethers.getAddress(tokenAdmin),
-                deployerName: deployerName ? deployerName.substring(0, 255) : null,
                 deployerBasename: deployerBasename ? deployerBasename.substring(0, 255) : null,
                 deployerENS: deployerENS ? deployerENS.substring(0, 255) : null,
                 transactionHash: log.transactionHash,
@@ -367,16 +365,51 @@ class DataIntegrityService {
     compareFieldValue(oldVal, newVal, fieldKey) {
         // Special handling for Date objects
         if (fieldKey === 'createdAt') {
-            const oldDate = oldVal instanceof Date ? oldVal : (oldVal ? new Date(oldVal) : null);
-            const newDate = newVal instanceof Date ? newVal : (newVal ? new Date(newVal) : null);
+            // Handle Prisma Date objects and strings - normalize to Date objects
+            let oldDate = null;
+            let newDate = null;
+            
+            if (oldVal) {
+                if (oldVal instanceof Date) {
+                    oldDate = oldVal;
+                } else if (typeof oldVal === 'string') {
+                    oldDate = new Date(oldVal);
+                } else if (oldVal.getTime) {
+                    // Handle Prisma DateTime objects
+                    oldDate = new Date(oldVal.getTime());
+                }
+            }
+            
+            if (newVal) {
+                if (newVal instanceof Date) {
+                    newDate = newVal;
+                } else if (typeof newVal === 'string') {
+                    newDate = new Date(newVal);
+                } else if (newVal.getTime) {
+                    newDate = new Date(newVal.getTime());
+                }
+            }
             
             if (oldDate && newDate) {
                 // Compare timestamps (ignore milliseconds differences)
                 const oldTime = Math.floor(oldDate.getTime() / 1000);
                 const newTime = Math.floor(newDate.getTime() / 1000);
-                return oldTime !== newTime;
+                const isDifferent = oldTime !== newTime;
+                
+                // Debug logging for timestamp differences
+                if (isDifferent && process.env.DEBUG_TIMESTAMPS === 'true') {
+                    logger.detail(`  [DEBUG] Timestamp comparison: old=${oldDate.toISOString()} (${oldTime}), new=${newDate.toISOString()} (${newTime}), diff=${Math.abs(newTime - oldTime)}s`);
+                }
+                
+                return isDifferent;
             }
-            return oldDate !== newDate;
+            
+            // If one is null and the other isn't, they're different
+            if ((oldDate && !newDate) || (!oldDate && newDate)) {
+                return true;
+            }
+            
+            return false;
         }
         
         // Handle null/undefined comparison for other fields
@@ -477,9 +510,7 @@ class DataIntegrityService {
                                 tokenAddress: deployment.tokenAddress,
                                 name: deployment.name,
                                 symbol: deployment.symbol,
-                                totalSupply: deployment.totalSupply,
                                 deployer: deployment.deployer,
-                                deployerName: deployment.deployerName || null,
                                 deployerBasename: deployment.deployerBasename || null,
                                 deployerENS: deployment.deployerENS || null,
                                 transactionHash: deployment.transactionHash,
@@ -504,9 +535,7 @@ class DataIntegrityService {
                                     const fieldsToCheck = [
                                         { key: 'name', label: 'Name' },
                                         { key: 'symbol', label: 'Symbol' },
-                                        { key: 'totalSupply', label: 'Total Supply' },
                                         { key: 'deployer', label: 'Deployer' },
-                                        { key: 'deployerName', label: 'Deployer Name' },
                                         { key: 'deployerBasename', label: 'Deployer Basename' },
                                         { key: 'deployerENS', label: 'Deployer ENS' },
                                         { key: 'tokenImage', label: 'Token Image' },
@@ -534,23 +563,25 @@ class DataIntegrityService {
                                         changes.forEach(change => {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
+                                        
+                                        // Build update data with accurate values (always update with what we resolved)
+                                        const updateData = {
+                                            name: deploymentData.name,
+                                            symbol: deploymentData.symbol,
+                                            deployer: deploymentData.deployer,
+                                            deployerBasename: deploymentData.deployerBasename,
+                                            deployerENS: deploymentData.deployerENS,
+                                            tokenImage: deploymentData.tokenImage,
+                                            creatorBps: deploymentData.creatorBps,
+                                            feyStakersBps: deploymentData.feyStakersBps,
+                                            poolId: deploymentData.poolId,
+                                            createdAt: deploymentData.createdAt,
+                                        };
+                                        
                                         operations.push(
                                             prisma.deployment.update({
                                                 where: { transactionHash: deployment.transactionHash },
-                                                data: {
-                                                    name: deploymentData.name,
-                                                    symbol: deploymentData.symbol,
-                                                    totalSupply: deploymentData.totalSupply,
-                                                    deployer: deploymentData.deployer,
-                                                    deployerName: deploymentData.deployerName,
-                                                    deployerBasename: deploymentData.deployerBasename,
-                                                    deployerENS: deploymentData.deployerENS,
-                                                    tokenImage: deploymentData.tokenImage,
-                                                    creatorBps: deploymentData.creatorBps,
-                                                    feyStakersBps: deploymentData.feyStakersBps,
-                                                    poolId: deploymentData.poolId,
-                                                    createdAt: deploymentData.createdAt,
-                                                },
+                                                data: updateData,
                                             })
                                         );
                                         updatedTokens.push(deployment.tokenAddress);
@@ -573,9 +604,7 @@ class DataIntegrityService {
                                     const fieldsToCheck = [
                                         { key: 'name', label: 'Name' },
                                         { key: 'symbol', label: 'Symbol' },
-                                        { key: 'totalSupply', label: 'Total Supply' },
                                         { key: 'deployer', label: 'Deployer' },
-                                        { key: 'deployerName', label: 'Deployer Name' },
                                         { key: 'deployerBasename', label: 'Deployer Basename' },
                                         { key: 'deployerENS', label: 'Deployer ENS' },
                                         { key: 'tokenImage', label: 'Token Image' },
@@ -603,23 +632,25 @@ class DataIntegrityService {
                                         changes.forEach(change => {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
+                                        
+                                        // Build update data with accurate values (always update with what we resolved)
+                                        const updateData = {
+                                            name: deploymentData.name,
+                                            symbol: deploymentData.symbol,
+                                            deployer: deploymentData.deployer,
+                                            deployerBasename: deploymentData.deployerBasename,
+                                            deployerENS: deploymentData.deployerENS,
+                                            tokenImage: deploymentData.tokenImage,
+                                            creatorBps: deploymentData.creatorBps,
+                                            feyStakersBps: deploymentData.feyStakersBps,
+                                            poolId: deploymentData.poolId,
+                                            createdAt: deploymentData.createdAt,
+                                        };
+                                        
                                         operations.push(
                                             prisma.deployment.update({
                                                 where: { tokenAddress: deployment.tokenAddress },
-                                                data: {
-                                                    name: deploymentData.name,
-                                                    symbol: deploymentData.symbol,
-                                                    totalSupply: deploymentData.totalSupply,
-                                                    deployer: deploymentData.deployer,
-                                                    deployerName: deploymentData.deployerName,
-                                                    deployerBasename: deploymentData.deployerBasename,
-                                                    deployerENS: deploymentData.deployerENS,
-                                                    tokenImage: deploymentData.tokenImage,
-                                                    creatorBps: deploymentData.creatorBps,
-                                                    feyStakersBps: deploymentData.feyStakersBps,
-                                                    poolId: deploymentData.poolId,
-                                                    createdAt: deploymentData.createdAt,
-                                                },
+                                                data: updateData,
                                             })
                                         );
                                         updatedTokens.push(deployment.tokenAddress);
