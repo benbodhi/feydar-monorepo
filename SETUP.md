@@ -138,9 +138,9 @@ For services in the same Railway project, always use **Private Network**.
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
 5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
    ```bash
-   pnpm --filter shared build
+   pnpm --filter shared build && cd packages/api && pnpm prisma:generate && cd ../..
    ```
-   - The bot depends on `@feydar/shared`, so we need to build the shared package first. Railway will auto-run `pnpm install` from the root.
+   - The bot depends on `@feydar/shared` and `@prisma/client`, so we need to build shared and generate Prisma Client. Railway will auto-run `pnpm install` from the root.
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/bot && node src/bot.js
@@ -233,7 +233,7 @@ For services in the same Railway project, always use **Private Network**.
 
 Before starting services, you need to run database migrations. There are two ways to do this on Railway:
 
-**Option A: Using Railway CLI (Recommended)**
+**Option A: Using Railway CLI**
 
 1. Install Railway CLI (one-time setup, can use npm for global CLI tools):
    ```bash
@@ -241,21 +241,46 @@ Before starting services, you need to run database migrations. There are two way
    # or if you prefer: pnpm add -g @railway/cli
    ```
 2. Login: `railway login`
-3. Link to your project: `railway link` (select your project)
-4. Run migrations:
+3. Link to your project: `railway link` (select your project, then select the API service)
+4. **Get the full public DATABASE_URL from Railway:**
+   - Go to your **PostgreSQL service** in Railway
+   - Click on **"Connect"** tab
+   - Select **"Public Network"** (not Private Network)
+   - Under **"Connection URL"**, click **"show"** to reveal the password
+   - Copy the **complete connection string** - it should look like:
+     ```
+     postgresql://postgres:YOUR_PASSWORD_HERE@switchyard.proxy.rlwy.net:38411/railway
+     ```
+   - Make sure you copy the **entire string** including `postgresql://`, username, password, host, port, and database name
+5. Run migrations with the full DATABASE_URL:
    ```bash
+   cd /path/to/feydar-monorepo
    cd packages/api
-   railway run pnpm prisma:migrate:deploy
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@switchyard.proxy.rlwy.net:38411/railway" pnpm prisma:migrate:deploy
    ```
+   **Important:** 
+   - Replace `YOUR_PASSWORD` with the actual password from the connection string you copied.
+   - **Do NOT use `railway run`** - it injects Railway's environment variables (including the private DATABASE_URL) which will override your command-line variable. Run the command directly instead.
 
-**Option B: Using Railway Web Interface**
+**Option B: Using Railway CLI with Service Variables**
 
-1. Go to your API service in Railway dashboard
-2. Click on "Deployments" tab
-3. Click "Run Command" or "New Deployment"
-4. Set the command to: `pnpm prisma:migrate:deploy`
-5. Make sure the working directory is set to `packages/api`
-6. Run the command
+Alternatively, you can pull the DATABASE_URL from Railway's service variables:
+
+1. Get the DATABASE_URL from your API service:
+   ```bash
+   railway variables --service api
+   ```
+   Look for the `DATABASE_URL` value (it will be the private network URL)
+
+2. Or get it from the PostgreSQL service:
+   ```bash
+   railway variables --service postgres
+   ```
+   This might show connection details
+
+3. If the above shows private URLs, you'll need to manually get the public URL from Railway dashboard (PostgreSQL service → Connect → Public Network → Connection URL)
+
+**Note:** Railway CLI runs commands in Railway's environment, so it should use the service's environment variables. If it's still using the private URL, you may need to temporarily set the public DATABASE_URL as shown in Option A.
 
 **Note:** Use `prisma migrate deploy` (not `prisma migrate dev`) for production. This applies pending migrations without creating new ones.
 
