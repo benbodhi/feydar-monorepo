@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TradeLinks } from './TradeLinks';
 import { ExplorerLinks } from './ExplorerLinks';
 import Image from 'next/image';
-import { ExternalLink, Copy, Check } from 'lucide-react';
+import { ExternalLink, Copy, Check, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTokenPrice, formatPrice, formatCurrency, formatCompactCurrency, formatPercentChange } from '@/lib/price';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils';
@@ -100,6 +100,9 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
   // Clipboard state
   const [copied, setCopied] = useState(false);
   
+  // Collapsible panel state for Price through Volume section
+  const [isPerformanceOpen, setIsPerformanceOpen] = useState(false);
+  
   const handleCopyAddress = async () => {
     try {
       await navigator.clipboard.writeText(deployment.tokenAddress);
@@ -191,142 +194,163 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
       <CardContent className="space-y-6">
         {/* Trade Section */}
         <div className="pb-6 border-b">
-          <p className="text-sm text-muted-foreground mb-2">Trade</p>
+          <p className="text-sm text-foreground mb-2">Trade</p>
           <TradeLinks tokenAddress={deployment.tokenAddress} />
         </div>
 
-        {/* Price Section */}
-        {priceData && (
-          <div className="space-y-4 pb-6 border-b">
-            {/* Price Row */}
-            <div className="flex flex-wrap items-center gap-6">
-              <div className="flex-1 min-w-[120px]">
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">Price USD</p>
-                <p className="text-lg font-semibold">
-                  {(() => {
-                    const formatted = formatPrice(priceData.price);
-                    if (typeof formatted === 'string') {
-                      return formatted;
-                    }
-                    return (
-                      <>
-                        {formatted.prefix}
-                        {formatted.zeroCount !== null && (
-                          <span className="text-[0.65em] align-sub leading-none">{formatted.zeroCount}</span>
-                        )}
-                        {formatted.digits}
-                      </>
-                    );
-                  })()}
-                </p>
-              </div>
-              <div className="flex-1 min-w-[120px] text-right">
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">Price FEY</p>
-                <p className="text-lg font-semibold text-muted-foreground">
-                  {priceInFEY !== null ? `${priceInFEY.toFixed(6)} FEY` : 'N/A'}
-                </p>
-              </div>
-            </div>
-
-            {/* Market Metrics Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">Liquidity</p>
-                {priceData.liquidity === null || isNaN(priceData.liquidity) ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <p className="text-base font-semibold cursor-help">N/A (smol)</p>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Liquidity data not available</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <p className="text-base font-semibold">{formatCurrency(priceData.liquidity)}</p>
-                )}
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">Market Cap</p>
-                <p className="text-base font-semibold">{formatCompactCurrency(priceData.marketCap)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1.5 font-medium">FDV</p>
-                <p className="text-base font-semibold">{formatCompactCurrency(fdv)}</p>
-              </div>
-            </div>
-            
-          </div>
-        )}
-
-        {/* Performance Section */}
+        {/* Price and Performance Section - Collapsible */}
         {priceData && (
           <div className="pb-6 border-b">
-            <div className="space-y-4">
-              {/* Percentage Changes */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-3 font-medium">Price Change</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
-                    <p className={`text-sm font-semibold ${
-                      priceData.priceChange5m !== null && priceData.priceChange5m >= 0 ? 'text-green-medium dark:text-green-light' : 
-                      priceData.priceChange5m !== null ? 'text-destructive' : 'text-muted-foreground'
-                    }`}>
-                      {formatPercentChange(priceData.priceChange5m)}
-                    </p>
+            <button
+              onClick={() => setIsPerformanceOpen(!isPerformanceOpen)}
+              className={`w-full flex items-center justify-between text-sm text-foreground hover:opacity-80 transition-opacity ${
+                isPerformanceOpen ? 'mb-2' : ''
+              }`}
+            >
+              <span>Price Data</span>
+              <ChevronDown 
+                className={`h-4 w-4 transition-transform duration-300 ease-in-out ${
+                  isPerformanceOpen ? 'transform rotate-180' : ''
+                }`}
+              />
+            </button>
+            <div
+              className={`grid transition-all duration-300 ease-in-out ${
+                isPerformanceOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="space-y-6 pt-4">
+                {/* Price Section */}
+                <div className="space-y-4">
+                  {/* Price Row */}
+                  <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex-1 min-w-[120px]">
+                      <p className="text-xs text-muted-foreground mb-1.5 font-medium">USD</p>
+                      <p className="text-lg font-semibold">
+                        {(() => {
+                          const formatted = formatPrice(priceData.price);
+                          if (typeof formatted === 'string') {
+                            return formatted;
+                          }
+                          return (
+                            <>
+                              {formatted.prefix}
+                              {formatted.zeroCount !== null && (
+                                <span className="text-[0.65em] align-sub leading-none">{formatted.zeroCount}</span>
+                              )}
+                              {formatted.digits}
+                            </>
+                          );
+                        })()}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-w-[120px] text-right">
+                      <p className="text-xs text-muted-foreground mb-1.5 font-medium">FEY</p>
+                      <p className="text-lg font-semibold">
+                        {priceInFEY !== null ? `${priceInFEY.toFixed(6)} FEY` : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
-                    <p className={`text-sm font-semibold ${
-                      priceData.priceChange1h !== null && priceData.priceChange1h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                      priceData.priceChange1h !== null ? 'text-destructive' : 'text-muted-foreground'
-                    }`}>
-                      {formatPercentChange(priceData.priceChange1h)}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
-                    <p className={`text-sm font-semibold ${
-                      priceData.priceChange6h !== null && priceData.priceChange6h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                      priceData.priceChange6h !== null ? 'text-destructive' : 'text-muted-foreground'
-                    }`}>
-                      {formatPercentChange(priceData.priceChange6h)}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
-                    <p className={`text-sm font-semibold ${
-                      priceData.priceChange24h !== null && priceData.priceChange24h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                      priceData.priceChange24h !== null ? 'text-destructive' : 'text-muted-foreground'
-                    }`}>
-                      {formatPercentChange(priceData.priceChange24h)}
-                    </p>
+
+                  {/* Market Metrics Row */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5 font-medium">Liquidity</p>
+                      {priceData.liquidity === null || isNaN(priceData.liquidity) ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-sm sm:text-base font-semibold cursor-help break-words">N/A (smol)</p>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Liquidity data not available</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <p className="text-sm sm:text-base font-semibold break-words">{formatCurrency(priceData.liquidity)}</p>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-muted-foreground mb-1.5 font-medium">Market Cap</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">{formatCompactCurrency(priceData.marketCap)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground mb-1.5 font-medium">FDV</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">{formatCompactCurrency(fdv)}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Volume */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-3 font-medium">Volume</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
-                    <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                {/* Performance Section */}
+                <div className="space-y-4 pt-6 border-t">
+                  {/* Percentage Changes */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-3 font-medium">Price Change</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
+                        <p className={`text-sm font-semibold ${
+                          priceData.priceChange5m !== null && priceData.priceChange5m >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData.priceChange5m !== null ? 'text-destructive' : 'text-muted-foreground'
+                        }`}>
+                          {formatPercentChange(priceData.priceChange5m)}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
+                        <p className={`text-sm font-semibold ${
+                          priceData.priceChange1h !== null && priceData.priceChange1h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData.priceChange1h !== null ? 'text-destructive' : 'text-muted-foreground'
+                        }`}>
+                          {formatPercentChange(priceData.priceChange1h)}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
+                        <p className={`text-sm font-semibold ${
+                          priceData.priceChange6h !== null && priceData.priceChange6h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData.priceChange6h !== null ? 'text-destructive' : 'text-muted-foreground'
+                        }`}>
+                          {formatPercentChange(priceData.priceChange6h)}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
+                        <p className={`text-sm font-semibold ${
+                          priceData.priceChange24h !== null && priceData.priceChange24h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData.priceChange24h !== null ? 'text-destructive' : 'text-muted-foreground'
+                        }`}>
+                          {formatPercentChange(priceData.priceChange24h)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
-                    <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+
+                  {/* Volume */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-3 font-medium">Volume</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
+                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
+                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
+                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
+                        <p className="text-sm font-semibold">{formatCurrency(priceData.volume24h)}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
-                    <p className="text-sm font-semibold text-muted-foreground">N/A</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
-                    <p className="text-sm font-semibold">{formatCurrency(priceData.volume24h)}</p>
-                  </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -335,7 +359,7 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-muted-foreground">Deployer</p>
+            <p className="text-sm text-foreground mb-2">Creator</p>
             <a
               href={createAddressLink(deployment.deployer)}
               target="_blank"
@@ -355,11 +379,11 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
            typeof deployment.creatorBps === 'number' && 
            typeof deployment.feyStakersBps === 'number' ? (
             <div className="col-span-2">
-              <p className="text-muted-foreground mb-2">1% Fee Split</p>
+              <p className="text-sm text-foreground mb-2">1% Fee Split</p>
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span>Creator: {(deployment.creatorBps / 100).toFixed(2)}%</span>
-                  <span>FEY Stakers: {(deployment.feyStakersBps / 100).toFixed(2)}%</span>
+                <div className="flex items-center justify-between text-xs text-foreground">
+                  <span>{Math.round(deployment.creatorBps / 100)}%</span>
+                  <span>{Math.round(deployment.feyStakersBps / 100)}%</span>
                 </div>
                 <div className="relative w-full bg-muted rounded-full h-4 overflow-visible">
                   {/* Weighted slider with center line */}
@@ -414,13 +438,17 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                     })()}
                   </div>
                 </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                  <span>Creator</span>
+                  <span>FEY Stakers</span>
+                </div>
               </div>
             </div>
           ) : null}
         </div>
 
         <div className="pt-6 border-t -mb-6">
-          <p className="text-sm text-muted-foreground mb-2">Explore</p>
+          <p className="text-sm text-foreground mb-2">Explore</p>
           <ExplorerLinks
             tokenAddress={deployment.tokenAddress}
           />
