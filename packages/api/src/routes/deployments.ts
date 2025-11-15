@@ -145,7 +145,6 @@ router.get('/:address', async (req, res) => {
       creatorBps: deployment.creatorBps,
       feyStakersBps: deployment.feyStakersBps,
       poolId: deployment.poolId,
-      pairedToken: deployment.pairedToken,
       blockNumber: Number(deployment.blockNumber),
       createdAt: deployment.createdAt,
     });
