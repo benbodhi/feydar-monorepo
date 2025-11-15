@@ -20,6 +20,11 @@ const BATCH_SIZE = 1000; // Process events in batches
 const MAX_BLOCKS_PER_QUERY = process.env.MAX_BLOCKS_PER_QUERY 
     ? parseInt(process.env.MAX_BLOCKS_PER_QUERY) 
     : 9; // Default to 9 for free tier compatibility
+const REQUEST_DELAY_MS = process.env.REQUEST_DELAY_MS 
+    ? parseInt(process.env.REQUEST_DELAY_MS) 
+    : 100; // Delay between requests in milliseconds
+const MAX_RETRIES = 5; // Maximum retries for rate limit errors
+const RETRY_DELAY_BASE_MS = 1000; // Base delay for exponential backoff (1 second)
 
 class BackfillService {
     constructor() {
@@ -337,7 +342,7 @@ class BackfillService {
         }
     }
 
-    async backfillRange(fromBlock, toBlock, existingAddresses) {
+    async backfillRange(fromBlock, toBlock, existingAddresses, retryCount = 0) {
         const factoryAddress = this.feyContracts.feyFactory.target;
         const filter = {
             address: factoryAddress,
@@ -349,6 +354,11 @@ class BackfillService {
         };
 
         try {
+            // Add delay before making the request to avoid rate limiting
+            if (retryCount === 0) {
+                await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
+            }
+            
             const logs = await this.provider.getLogs(filter);
             logger.section(`📦 Processing blocks ${fromBlock} to ${toBlock} (${logs.length} events)`);
 
@@ -598,23 +608,40 @@ class BackfillService {
                     }
                 }
 
-                // Small delay to avoid rate limiting
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Delay between batches to avoid rate limiting
+                await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
             }
 
             logger.sectionEnd();
         } catch (error) {
-            // Check if it's a block range limit error
             const errorMessage = error.message || '';
+            const errorString = JSON.stringify(error);
+            
+            // Check if it's a rate limit error (429)
+            const isRateLimitError = errorMessage.includes('429') || 
+                                    errorString.includes('429') ||
+                                    errorMessage.includes('exceeded its compute units') ||
+                                    errorMessage.includes('throughput');
+            
+            // Check if it's a block range limit error
             const isBlockRangeError = errorMessage.includes('10 block range') || 
                                      errorMessage.includes('block range should work');
             
+            // Handle rate limit errors with exponential backoff retry
+            if (isRateLimitError && retryCount < MAX_RETRIES) {
+                const retryDelay = RETRY_DELAY_BASE_MS * Math.pow(2, retryCount); // Exponential backoff
+                logger.warn(`Rate limit error (429) for blocks ${fromBlock}-${toBlock}. Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return await this.backfillRange(fromBlock, toBlock, existingAddresses, retryCount + 1);
+            }
+            
+            // Handle block range errors by splitting
             if (isBlockRangeError && (toBlock - fromBlock) > 10) {
                 // Split the range in half and retry
                 logger.warn(`Block range too large (${toBlock - fromBlock + 1} blocks), splitting...`);
                 const midBlock = Math.floor((fromBlock + toBlock) / 2);
-                await this.backfillRange(fromBlock, midBlock, existingAddresses);
-                await this.backfillRange(midBlock + 1, toBlock, existingAddresses);
+                await this.backfillRange(fromBlock, midBlock, existingAddresses, 0);
+                await this.backfillRange(midBlock + 1, toBlock, existingAddresses, 0);
             } else {
                 const errorMsg = `Error querying blocks ${fromBlock}-${toBlock}: ${error.message}`;
                 logger.error(errorMsg);

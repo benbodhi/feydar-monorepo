@@ -284,7 +284,68 @@ Alternatively, you can pull the DATABASE_URL from Railway's service variables:
 
 **Note:** Use `prisma migrate deploy` (not `prisma migrate dev`) for production. This applies pending migrations without creating new ones.
 
-After migrations complete, your services will be ready to start.
+### 6. (Optional) Backfill Historical Deployments
+
+To populate your production database with historical token deployments, you can run the backfill script. This is optional but recommended if you want historical data in your database.
+
+**Option A: Run on Railway (Recommended)**
+
+Since all services are on Railway, you can run the backfill script directly on Railway using Railway's environment variables. This uses the private network connection and is more efficient.
+
+1. **Link Railway CLI to your Bot service:**
+   ```bash
+   railway link
+   # Select your project, then select the Bot service
+   ```
+
+2. **Run the backfill script on Railway using Railway SSH:**
+   
+   The `railway ssh` command opens an interactive shell **on Railway's servers** where your code is deployed:
+   
+   ```bash
+   railway ssh
+   # Or specify the service: railway ssh --service bot
+   ```
+   
+   Once in the Railway shell, navigate to the bot directory and run the backfill:
+   ```bash
+   cd packages/bot
+   BACKFILL_FROM_LATEST=true pnpm backfill
+   ```
+   
+   Railway will automatically use all environment variables from your Bot service (including `DATABASE_URL`, `ALCHEMY_API_KEY`, and `FEY_FACTORY_ADDRESS`).
+
+   **Note:** `railway run` runs commands locally (not on Railway), so use `railway ssh` instead for running commands on Railway's servers.
+
+**Option B: Run Locally**
+
+If you prefer to run it locally, you'll need to use the public DATABASE_URL:
+
+1. **Get required environment variables:**
+   - `DATABASE_URL` - Use the same public URL from step 5 (migrations)
+   - `ALCHEMY_API_KEY` - Get from your Bot service variables in Railway
+   - `FEY_FACTORY_ADDRESS` - Get from your Bot service variables in Railway
+
+2. **Run the backfill script:**
+   ```bash
+   cd packages/bot
+   DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@switchyard.proxy.rlwy.net:38411/railway" \
+   ALCHEMY_API_KEY="your_alchemy_key" \
+   FEY_FACTORY_ADDRESS="your_factory_address" \
+   pnpm backfill
+   ```
+
+   **Note:** Replace the values with your actual credentials. You can also set these as environment variables in your shell before running the command.
+
+**Optional Environment Variables:**
+- `FEY_FACTORY_DEPLOYMENT_BLOCK` - Block number to start backfill from (defaults to 38141030)
+- `BACKFILL_FROM_LATEST=true` - Start from the latest block already in database (useful for catching up)
+- `MAX_BLOCKS_PER_QUERY` - Number of blocks per query (defaults to 9 for Alchemy free tier)
+- `REQUEST_DELAY_MS` - Delay between requests in milliseconds (defaults to 100ms). Increase this (e.g., `REQUEST_DELAY_MS=500`) if you encounter rate limit errors (429)
+
+**Note:** The backfill script is idempotent - it's safe to run multiple times. It only adds missing deployments and updates existing ones with latest data.
+
+After migrations (and optionally backfill) complete, your services will be ready to start.
 
 ## Troubleshooting
 
