@@ -96,7 +96,7 @@ async function calculatePriceInFEY(
       return null;
     }
 
-    const feyData = await feyResponse.json();
+    const feyData = await feyResponse.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
     if (!feyData.pairs || feyData.pairs.length === 0) {
       return null;
     }
@@ -165,7 +165,7 @@ router.get('/:tokenAddress', async (req, res) => {
               `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
             );
             if (dexscreenerResponse.ok) {
-              const data = await dexscreenerResponse.json();
+              const data = await dexscreenerResponse.json() as { pairs?: any[] };
               allPairs = data.pairs || [];
               if (allPairs.length > 0) {
                 const bestPair = allPairs.reduce((prev: any, current: any) => {
@@ -238,7 +238,7 @@ router.get('/:tokenAddress', async (req, res) => {
       });
     }
 
-    const data = await dexscreenerResponse.json();
+    const data = await dexscreenerResponse.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
 
     if (!data.pairs || data.pairs.length === 0) {
       return res.json({
@@ -278,7 +278,7 @@ router.get('/:tokenAddress', async (req, res) => {
     }
 
     const priceUSD = bestPair.priceUsd ? parseFloat(bestPair.priceUsd) : null;
-    const priceInFEY = await calculatePriceInFEY(priceUSD, pairedToken, data.pairs, tokenAddress.toLowerCase());
+    const priceInFEY = await calculatePriceInFEY(priceUSD, pairedToken, data.pairs || [], tokenAddress.toLowerCase());
 
     res.json({
       price: priceUSD,

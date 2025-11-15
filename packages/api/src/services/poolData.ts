@@ -97,7 +97,7 @@ async function calculateLiquidityUSD(
     let token1PriceUSD: number | null = null;
 
     if (token0Response?.ok) {
-      const data = await token0Response.json();
+      const data = await token0Response.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
       if (data.pairs && data.pairs.length > 0) {
         const bestPair = data.pairs.reduce((prev: any, current: any) => {
           const prevLiquidity = prev.liquidity?.usd || 0;
@@ -109,7 +109,7 @@ async function calculateLiquidityUSD(
     }
 
     if (token1Response?.ok) {
-      const data = await token1Response.json();
+      const data = await token1Response.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
       if (data.pairs && data.pairs.length > 0) {
         const bestPair = data.pairs.reduce((prev: any, current: any) => {
           const prevLiquidity = prev.liquidity?.usd || 0;
@@ -274,8 +274,8 @@ export async function queryPoolData(
       token1 = tokenAddress.toLowerCase();
     }
 
-    const token0IsQuote = token0.toLowerCase() === WETH_BASE.toLowerCase() || 
-                          (pairedToken && token0.toLowerCase() === pairedToken.toLowerCase());
+    const token0IsQuote: boolean = token0.toLowerCase() === WETH_BASE.toLowerCase() || 
+                          (pairedToken !== null && token0.toLowerCase() === pairedToken.toLowerCase());
     
     const [token0Decimals, token1Decimals] = await Promise.all([
       getTokenDecimals(token0, provider),

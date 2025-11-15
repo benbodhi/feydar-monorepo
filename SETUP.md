@@ -138,9 +138,9 @@ For services in the same Railway project, always use **Private Network**.
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
 5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
    ```bash
-   echo "Bot service - no build needed"
+   pnpm --filter shared build
    ```
-   - This prevents Railway from running the root `pnpm run build` command. Railway will still auto-run `pnpm install` from the root.
+   - The bot depends on `@feydar/shared`, so we need to build the shared package first. Railway will auto-run `pnpm install` from the root.
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/bot && node src/bot.js
