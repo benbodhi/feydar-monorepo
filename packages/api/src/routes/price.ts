@@ -238,7 +238,34 @@ router.get('/:tokenAddress', async (req, res) => {
       });
     }
 
-    const data = await dexscreenerResponse.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
+    const data = await dexscreenerResponse.json() as {
+      pairs?: Array<{
+        liquidity?: { usd?: number | string };
+        priceUsd?: string;
+        priceChange?: {
+          m5?: string;
+          h1?: string;
+          h6?: string;
+          h24?: string;
+        };
+        marketCap?: string | number;
+        volume?: {
+          h24?: string | number;
+          h24Buy?: string | number;
+          h24Sell?: string | number;
+        };
+        txns?: {
+          h24?: {
+            buys?: number;
+            sells?: number;
+            total?: number;
+            buyers?: number;
+            sellers?: number;
+            makers?: number;
+          };
+        };
+      }>;
+    };
 
     if (!data.pairs || data.pairs.length === 0) {
       return res.json({
@@ -295,16 +322,16 @@ router.get('/:tokenAddress', async (req, res) => {
       priceChange24h: bestPair.priceChange?.h24
         ? parseFloat(bestPair.priceChange.h24)
         : null,
-      marketCap: bestPair.marketCap ? parseFloat(bestPair.marketCap) : null,
-      liquidity: bestPair.liquidity?.usd ? parseFloat(bestPair.liquidity.usd) : null,
-      volume24h: bestPair.volume?.h24 ? parseFloat(bestPair.volume.h24) : null,
+      marketCap: bestPair.marketCap ? parseFloat(String(bestPair.marketCap)) : null,
+      liquidity: bestPair.liquidity?.usd ? parseFloat(String(bestPair.liquidity.usd)) : null,
+      volume24h: bestPair.volume?.h24 ? parseFloat(String(bestPair.volume.h24)) : null,
       txns24h: bestPair.txns?.h24?.buys && bestPair.txns?.h24?.sells
         ? (bestPair.txns.h24.buys + bestPair.txns.h24.sells)
         : bestPair.txns?.h24?.total || null,
       buys24h: bestPair.txns?.h24?.buys || null,
       sells24h: bestPair.txns?.h24?.sells || null,
-      buyVolume24h: bestPair.volume?.h24Buy || null,
-      sellVolume24h: bestPair.volume?.h24Sell || null,
+      buyVolume24h: bestPair.volume?.h24Buy ? parseFloat(String(bestPair.volume.h24Buy)) : null,
+      sellVolume24h: bestPair.volume?.h24Sell ? parseFloat(String(bestPair.volume.h24Sell)) : null,
       buyers24h: bestPair.txns?.h24?.buyers || null,
       sellers24h: bestPair.txns?.h24?.sellers || null,
       makers24h: bestPair.txns?.h24?.makers || null,
