@@ -146,11 +146,41 @@ class DataIntegrityService {
 
             // Extract fee split from TokenRewardAdded event
             // This is the actual fee split between Creator and FEY Stakers
+            // We MUST get this data - retry until we succeed
             let creatorBps = null;
             let feyStakersBps = null;
-            try {
-                const receipt = await this.provider.getTransactionReceipt(log.transactionHash);
-                if (receipt) {
+            const MAX_RECEIPT_RETRIES = 50; // Very high limit - we must get this data
+            let receiptRetryCount = 0;
+            let receiptFetched = false;
+            let receipt = null;
+            
+            while (!receiptFetched) {
+                try {
+                    receipt = await this.provider.getTransactionReceipt(log.transactionHash);
+                    receiptFetched = true;
+                } catch (e) {
+                    receiptRetryCount++;
+                    const isRateLimit = e.message && (
+                        e.message.includes('429') || 
+                        e.message.includes('rate limit') || 
+                        e.message.includes('compute units') ||
+                        e.message.includes('throughput')
+                    );
+                    
+                    if (receiptRetryCount < MAX_RECEIPT_RETRIES) {
+                        const delay = RETRY_DELAY_BASE_MS * Math.pow(2, Math.min(receiptRetryCount - 1, 5)); // Cap exponential backoff
+                        logger.detail(`  Rate limit fetching receipt for ${log.transactionHash}, retrying in ${delay}ms (attempt ${receiptRetryCount}/${MAX_RECEIPT_RETRIES})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        logger.error(`  Could not fetch transaction receipt for ${log.transactionHash} after ${MAX_RECEIPT_RETRIES} attempts: ${e.message}`);
+                        logger.error(`  This is critical data - will retry from beginning of block range`);
+                        throw new Error(`Failed to fetch transaction receipt after ${MAX_RECEIPT_RETRIES} attempts - cannot proceed without this data`);
+                    }
+                }
+            }
+            
+            if (receipt) {
+                try {
                     // Extract fee split from TokenRewardAdded event
                     const TOKEN_REWARD_CONTRACT = '0x282B4e72a79ebe79c1bd295c5ebd72940e50e836';
                     const TOKEN_REWARD_ADDED_TOPIC = '0xc9b03d1b68674b3ca5738b69c14e4dbcfcb7f474303edd540b1d7dfa785d27ff';
@@ -261,8 +291,13 @@ class DataIntegrityService {
                         }
                     }
                 }
-            } catch (e) {
-                // Fee data not critical for data integrity
+                } catch (e) {
+                    logger.warn(`  Error extracting fee split from receipt for ${log.transactionHash}: ${e.message}`);
+                    // Fee splits might not exist for all tokens, so we continue with null values
+                    // This is acceptable - not all tokens have fee splits set
+                }
+            } else {
+                throw new Error(`Failed to fetch transaction receipt for ${log.transactionHash} - this should not happen`);
             }
 
             // Note: All FEY tokens have 100b supply, so we don't need to fetch/store it
@@ -312,16 +347,51 @@ class DataIntegrityService {
             }
 
             // Get block timestamp - CRITICAL for accurate deployment times
-            let createdAt = new Date();
-            try {
-                const block = await this.provider.getBlock(log.blockNumber);
-                if (block && block.timestamp) {
-                    createdAt = new Date(Number(block.timestamp) * 1000);
-                } else {
-                    logger.warn(`Block ${log.blockNumber} has no timestamp, using current time as fallback`);
+            // We MUST have accurate block timestamp - retry indefinitely until we get it
+            let createdAt = null;
+            const MAX_BLOCK_RETRIES = 50; // Very high limit - we must get this data
+            let blockRetryCount = 0;
+            let blockFetched = false;
+            
+            while (!blockFetched) {
+                try {
+                    const block = await this.provider.getBlock(log.blockNumber);
+                    if (block && block.timestamp) {
+                        createdAt = new Date(Number(block.timestamp) * 1000);
+                        blockFetched = true;
+                    } else {
+                        blockRetryCount++;
+                        logger.warn(`Block ${log.blockNumber} has no timestamp, retrying... (attempt ${blockRetryCount})`);
+                        if (blockRetryCount >= MAX_BLOCK_RETRIES) {
+                            logger.error(`Block ${log.blockNumber} has no timestamp after ${MAX_BLOCK_RETRIES} attempts - this should not happen`);
+                            throw new Error(`Block ${log.blockNumber} has no timestamp`);
+                        }
+                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_BASE_MS * Math.pow(2, Math.min(blockRetryCount - 1, 5))));
+                    }
+                } catch (e) {
+                    blockRetryCount++;
+                    const isRateLimit = e.message && (
+                        e.message.includes('429') || 
+                        e.message.includes('rate limit') || 
+                        e.message.includes('compute units') ||
+                        e.message.includes('throughput')
+                    );
+                    
+                    if (blockRetryCount < MAX_BLOCK_RETRIES) {
+                        const delay = RETRY_DELAY_BASE_MS * Math.pow(2, Math.min(blockRetryCount - 1, 5)); // Cap exponential backoff
+                        logger.detail(`  Rate limit fetching block ${log.blockNumber}, retrying in ${delay}ms (attempt ${blockRetryCount}/${MAX_BLOCK_RETRIES})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        logger.error(`Could not fetch block timestamp for block ${log.blockNumber} after ${MAX_BLOCK_RETRIES} attempts: ${e.message}`);
+                        logger.error(`  This is critical data - will retry from beginning of block range`);
+                        throw new Error(`Failed to fetch block timestamp after ${MAX_BLOCK_RETRIES} attempts - cannot proceed without this data`);
+                    }
                 }
-            } catch (e) {
-                logger.warn(`Could not fetch block timestamp for block ${log.blockNumber}: ${e.message}, using current time as fallback`);
+            }
+            
+            // Final validation - if we don't have a timestamp, we cannot proceed
+            if (!createdAt) {
+                throw new Error(`Failed to get block timestamp for ${log.transactionHash} (block ${log.blockNumber}) - this should not happen`);
             }
 
             // Format poolId as hex string (bytes32)
@@ -564,7 +634,8 @@ class DataIntegrityService {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
                                         
-                                        // Build update data with accurate values (always update with what we resolved)
+                                        // Build update data with accurate values
+                                        // Only update fields where we have verified data
                                         const updateData = {
                                             name: deploymentData.name,
                                             symbol: deploymentData.symbol,
@@ -572,8 +643,13 @@ class DataIntegrityService {
                                             deployerBasename: deploymentData.deployerBasename,
                                             deployerENS: deploymentData.deployerENS,
                                             tokenImage: deploymentData.tokenImage,
-                                            creatorBps: deploymentData.creatorBps,
-                                            feyStakersBps: deploymentData.feyStakersBps,
+                                            // Only update fee splits if we actually found them - if null, skip updating those fields
+                                            ...(deploymentData.creatorBps !== null && deploymentData.creatorBps !== undefined 
+                                                ? { creatorBps: deploymentData.creatorBps } 
+                                                : {}),
+                                            ...(deploymentData.feyStakersBps !== null && deploymentData.feyStakersBps !== undefined 
+                                                ? { feyStakersBps: deploymentData.feyStakersBps } 
+                                                : {}),
                                             poolId: deploymentData.poolId,
                                             createdAt: deploymentData.createdAt,
                                         };
@@ -633,7 +709,8 @@ class DataIntegrityService {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
                                         
-                                        // Build update data with accurate values (always update with what we resolved)
+                                        // Build update data with accurate values
+                                        // Only update fields where we have verified data
                                         const updateData = {
                                             name: deploymentData.name,
                                             symbol: deploymentData.symbol,
@@ -641,8 +718,13 @@ class DataIntegrityService {
                                             deployerBasename: deploymentData.deployerBasename,
                                             deployerENS: deploymentData.deployerENS,
                                             tokenImage: deploymentData.tokenImage,
-                                            creatorBps: deploymentData.creatorBps,
-                                            feyStakersBps: deploymentData.feyStakersBps,
+                                            // Only update fee splits if we actually found them - if null, skip updating those fields
+                                            ...(deploymentData.creatorBps !== null && deploymentData.creatorBps !== undefined 
+                                                ? { creatorBps: deploymentData.creatorBps } 
+                                                : {}),
+                                            ...(deploymentData.feyStakersBps !== null && deploymentData.feyStakersBps !== undefined 
+                                                ? { feyStakersBps: deploymentData.feyStakersBps } 
+                                                : {}),
                                             poolId: deploymentData.poolId,
                                             createdAt: deploymentData.createdAt,
                                         };

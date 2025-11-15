@@ -102,17 +102,52 @@ async function handleTokenDeployment({
                 logger.detail('Fee Split', `Creator: ${creatorBps} bps (${(creatorBps / 100).toFixed(2)}%), FEY Stakers: ${feyStakersBps} bps (${(feyStakersBps / 100).toFixed(2)}%)`);
             }
 
-            // Get block timestamp for accurate createdAt
-            let createdAt = new Date();
+            // Get block timestamp for accurate createdAt - MUST have this, retry until we get it
+            let createdAt = null;
             if (blockNumber && provider) {
-                try {
-                    const block = await provider.getBlock(blockNumber);
-                    if (block && block.timestamp) {
-                        createdAt = new Date(Number(block.timestamp) * 1000);
+                const MAX_BLOCK_RETRIES = 10;
+                const RETRY_DELAY_BASE_MS = 1000;
+                let blockRetryCount = 0;
+                let blockFetched = false;
+                
+                while (!blockFetched && blockRetryCount < MAX_BLOCK_RETRIES) {
+                    try {
+                        const block = await provider.getBlock(blockNumber);
+                        if (block && block.timestamp) {
+                            createdAt = new Date(Number(block.timestamp) * 1000);
+                            blockFetched = true;
+                        } else {
+                            logger.warn(`Block ${blockNumber} has no timestamp, retrying...`);
+                            blockRetryCount++;
+                            if (blockRetryCount < MAX_BLOCK_RETRIES) {
+                                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_BASE_MS * Math.pow(2, blockRetryCount - 1)));
+                            }
+                        }
+                    } catch (e) {
+                        blockRetryCount++;
+                        const isRateLimit = e.message && (
+                            e.message.includes('429') || 
+                            e.message.includes('rate limit') || 
+                            e.message.includes('compute units') ||
+                            e.message.includes('throughput')
+                        );
+                        
+                        if (blockRetryCount < MAX_BLOCK_RETRIES) {
+                            const delay = RETRY_DELAY_BASE_MS * Math.pow(2, blockRetryCount - 1);
+                            logger.warn(`Could not fetch block timestamp for block ${blockNumber} (attempt ${blockRetryCount}/${MAX_BLOCK_RETRIES}): ${e.message}. Retrying in ${delay}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        } else {
+                            logger.error(`Failed to fetch block timestamp for block ${blockNumber} after ${MAX_BLOCK_RETRIES} attempts: ${e.message}`);
+                            throw new Error(`Cannot proceed without block timestamp for block ${blockNumber}`);
+                        }
                     }
-                } catch (e) {
-                    logger.warn(`Could not fetch block timestamp for block ${blockNumber}, using current time`);
                 }
+                
+                if (!createdAt) {
+                    throw new Error(`Failed to get block timestamp for block ${blockNumber} - cannot proceed`);
+                }
+            } else {
+                throw new Error('Missing blockNumber or provider - cannot determine deployment timestamp');
             }
 
             await prisma.deployment.upsert({

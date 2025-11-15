@@ -26,7 +26,7 @@ model Deployment {
   feyStakersBps   Int?      // FEY Stakers fee in basis points (from TokenRewardAdded event)
   poolId          String?   @db.VarChar(66)  // Uniswap V3 pool ID (bytes32 as hex)
   blockNumber     BigInt
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime  // Must always be set to block timestamp, never use default
 
   @@index([createdAt(sort: Desc)])
   @@index([tokenAddress])
