@@ -61,30 +61,30 @@ class BackfillService {
 
     async getFactoryDeploymentBlock() {
         // Get the block where the factory was deployed
+        // This is the "starting block" - the earliest block we should ever backfill to
+        // When processing backwards, this is where we END (the earliest point in our range)
         const factoryCode = await this.provider.getCode(this.feyContracts.feyFactory.target);
         if (factoryCode === '0x' || factoryCode.length < 10) {
             throw new Error(`FEY Factory contract not found at ${this.feyContracts.feyFactory.target}`);
         }
 
-        // Check if we should start from the latest block in database
-        if (process.env.BACKFILL_FROM_LATEST === 'true') {
-            const latestDeployment = await prisma.deployment.findFirst({
-                orderBy: { blockNumber: 'desc' },
-                select: { blockNumber: true }
-            });
-            
-            if (latestDeployment && latestDeployment.blockNumber) {
-                const latestBlock = Number(latestDeployment.blockNumber);
-                logger.detail(`Starting from latest block in DB: ${latestBlock}`);
-                return latestBlock;
-            }
-        }
-
-        // Default starting block for backfill (can be overridden via FEY_FACTORY_DEPLOYMENT_BLOCK env var)
-        // Use environment variable if set, otherwise use default starting block
+        // Return the factory deployment block (the "starting block" - earliest range)
+        // This is set via FEY_FACTORY_DEPLOYMENT_BLOCK env var or defaults to 38141030
         return process.env.FEY_FACTORY_DEPLOYMENT_BLOCK 
             ? parseInt(process.env.FEY_FACTORY_DEPLOYMENT_BLOCK)
             : 38141030;
+    }
+    
+    async getLatestBlockInDatabase() {
+        // Get the latest block in database (used when BACKFILL_FROM_LATEST=true)
+        const latestDeployment = await prisma.deployment.findFirst({
+            orderBy: { blockNumber: 'desc' },
+            select: { blockNumber: true }
+        });
+        
+        return latestDeployment && latestDeployment.blockNumber 
+            ? Number(latestDeployment.blockNumber) 
+            : null;
     }
 
     async getExistingTokenAddresses() {
@@ -663,14 +663,19 @@ class BackfillService {
 
             // Get block range
             const latestBlock = await this.getLatestBlockNumber();
-            const startBlock = await this.getFactoryDeploymentBlock();
+            const startingBlock = await this.getFactoryDeploymentBlock(); // The "starting block" - earliest range we should ever backfill to
+            const latestBlockInDb = await this.getLatestBlockInDatabase();
             
-            // Check latest block in database
-            const latestInDb = await prisma.deployment.findFirst({
-                orderBy: { blockNumber: 'desc' },
-                select: { blockNumber: true }
-            });
-            const latestBlockInDb = latestInDb ? Number(latestInDb.blockNumber) : null;
+            // Determine where to START processing (we always process backwards)
+            // BACKFILL_FROM_LATEST=true: Start from latest block in DB + 1 (skip already processed blocks)
+            // Otherwise: Start from chain head (process everything from chain head backwards)
+            // We ALWAYS process backwards to the "starting block" (factory deployment block) to get ALL tokens ever deployed
+            const processFromBlock = (process.env.BACKFILL_FROM_LATEST === 'true' && latestBlockInDb)
+                ? latestBlockInDb + 1  // Start from block AFTER latest in DB (skip already processed)
+                : latestBlock;          // Start from chain head (process everything)
+            
+            // Always process backwards to the "starting block" (factory deployment block - earliest range)
+            const processToBlock = startingBlock;
             
             logger.section('🔍 Starting Backfill');
             logger.detail('📝 Behavior:');
@@ -679,29 +684,33 @@ class BackfillService {
             logger.detail('   • Ensures database has complete and up-to-date information for all tokens');
             logger.detail(`Latest block on chain: ${latestBlock}`);
             logger.detail(`Latest block in DB: ${latestBlockInDb || 'none'}`);
-            logger.detail(`Starting from block: ${startBlock}`);
-            logger.detail(`Total blocks to process: ${latestBlock - startBlock}`);
+            logger.detail(`Starting block (earliest range): ${startingBlock}`);
+            logger.detail(`Processing backwards from block ${processFromBlock} to ${processToBlock}`);
+            
+            const totalBlocks = processFromBlock - processToBlock + 1; // +1 to include both endpoints
+            logger.detail(`Total blocks to process: ${totalBlocks}`);
             
             if (latestBlockInDb && latestBlockInDb < latestBlock) {
                 logger.detail(`⚠️  Gap detected: DB is ${latestBlock - latestBlockInDb} blocks behind chain`);
             }
             logger.sectionEnd();
 
-            // Process in chunks from latest block backwards to start block
+            // Process in chunks backwards from processFromBlock to startingBlock (factory deployment block)
             // This ensures we catch the most recent tokens first (useful for recovery scenarios)
-            let currentBlock = latestBlock;
-            const totalBlocks = latestBlock - startBlock;
+            let currentBlock = processFromBlock;
             let processedBlocks = 0;
             
-            while (currentBlock >= startBlock) {
-                const fromBlock = Math.max(currentBlock - MAX_BLOCKS_PER_QUERY + 1, startBlock);
+            logger.detail(`Processing backwards from block ${processFromBlock} to ${processToBlock} (${totalBlocks} blocks total)`);
+            
+            while (currentBlock >= processToBlock) {
+                const fromBlock = Math.max(currentBlock - MAX_BLOCKS_PER_QUERY + 1, processToBlock);
                 const toBlock = currentBlock;
                 await this.backfillRange(fromBlock, toBlock, existingAddresses);
                 currentBlock = fromBlock - 1;
 
                 // Progress update
                 processedBlocks += (toBlock - fromBlock + 1);
-                const progress = ((processedBlocks / totalBlocks) * 100).toFixed(2);
+                const progress = totalBlocks > 0 ? ((processedBlocks / totalBlocks) * 100).toFixed(2) : '100.00';
                 logger.detail(`Progress: ${progress}% (processed ${processedBlocks}/${totalBlocks} blocks, current: ${fromBlock}-${toBlock})`);
             }
 
