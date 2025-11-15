@@ -118,7 +118,7 @@ cd packages/webapp && pnpm start
 
 ## Railway Deployment
 
-**Note:** Railway automatically detects `pnpm` from the `packageManager` field in your root `package.json` and will use it for all install/build commands. All commands below use `pnpm` to match your local development setup.
+**Important:** For monorepos with pnpm workspaces, **do NOT set a Root Directory**. Railway needs to see the root `package.json` to detect `pnpm`. We'll handle package-specific builds using pnpm filters from the repo root.
 
 ### 1. Database Setup
 
@@ -135,29 +135,41 @@ For services in the same Railway project, always use **Private Network**.
 1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
 2. Select your repository (you'll use the same repo for all services)
 3. After the service is created, go to the **Settings** tab
-4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
-5. Set **"Root Directory"** to: `packages/bot`
-6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `node src/bot.js`
-   - **Note:** Railway will automatically run `pnpm install` before starting. The bot doesn't need a build step, so no build command is needed.
+4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
+5. Go to **"Build"** section (or **"Settings"** → **"Build"**), **do NOT add a build command** - Railway will auto-detect and run `pnpm install` from the root. The bot doesn't need a build step.
+6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+   ```bash
+   cd packages/bot && node src/bot.js
+   ```
 7. Go to **"Variables"** tab and add environment variables:
    - `DISCORD_TOKEN`
    - `DISCORD_CHANNEL_ID`
    - `ALCHEMY_API_KEY`
    - `FEY_FACTORY_ADDRESS`
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
-   - `API_URL` (from API service URL, e.g., `https://your-api-service.railway.app`)
+   - `API_URL` - Find this in your **API service**:
+     - Go to your API service in Railway
+     - Click on the service name or go to the **"Settings"** tab
+     - Look for **"Domains"** or **"Networking"** section
+     - Copy the **public URL** (e.g., `https://your-api-service.railway.app`)
+     - If no domain is set, Railway will show a generated URL like `https://your-api-service-production.up.railway.app`
 
 ### 3. API Service
 
 1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
 2. Select the **same repository** as the Bot service
 3. After the service is created, go to the **Settings** tab
-4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
-5. Set **"Root Directory"** to: `packages/api`
-6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to: `pnpm build`
-7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm start`
-   - **Note:** Railway will automatically run `pnpm install` before the build command. The build step compiles TypeScript, then the start command runs the server.
-8. Go to **"Variables"** tab and add environment variables:
+4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
+5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+   ```bash
+   pnpm --filter shared build && cd packages/api && pnpm prisma:generate && cd ../.. && pnpm --filter api build
+   ```
+   - Railway will auto-run `pnpm install` from root first, then this builds shared, generates Prisma client, and builds API
+6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+   ```bash
+   cd packages/api && pnpm start
+   ```
+7. Go to **"Variables"** tab and add environment variables:
    
    **Required:**
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
@@ -181,14 +193,29 @@ For services in the same Railway project, always use **Private Network**.
 1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
 2. Select the **same repository** as the other services
 3. After the service is created, go to the **Settings** tab
-4. Under **"Source"** section, click **"Add Root Directory"** (if not already visible)
-5. Set **"Root Directory"** to: `packages/webapp`
-6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to: `pnpm build`
-7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to: `pnpm start`
-   - **Note:** Railway will automatically run `pnpm install` before the build command. The build step compiles Next.js, then the start command runs the server.
+4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
+5. Go to **"Variables"** tab and add:
+   - `NODE_VERSION=20` (Next.js 16 requires Node.js >=20.9.0)
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+   ```bash
+   pnpm --filter shared build && pnpm --filter webapp build
+   ```
+   - Railway will auto-run `pnpm install` from root first, then this builds shared and webapp packages
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+   ```bash
+   cd packages/webapp && pnpm start
+   ```
 8. Go to **"Variables"** tab and add environment variables:
-   - `NEXT_PUBLIC_API_URL` (API service URL)
-   - `NEXT_PUBLIC_WS_URL` (API service WebSocket URL)
+   - `NEXT_PUBLIC_API_URL` - Find this in your **API service**:
+     - Go to your API service in Railway
+     - Click on the service name or go to the **"Settings"** tab
+     - Look for **"Domains"** or **"Networking"** section
+     - Copy the **public URL** (e.g., `https://your-api-service.railway.app`)
+     - If no domain is set, Railway will show a generated URL like `https://your-api-service-production.up.railway.app`
+   - `NEXT_PUBLIC_WS_URL` - This is the same as `NEXT_PUBLIC_API_URL` but with `ws://` or `wss://` protocol:
+     - If your API URL is `https://your-api-service.railway.app`, use `wss://your-api-service.railway.app`
+     - If your API URL is `http://your-api-service.railway.app`, use `ws://your-api-service.railway.app`
+     - **Note:** Railway uses HTTPS by default, so use `wss://` (secure WebSocket)
 
 ### 5. Run Migrations
 
