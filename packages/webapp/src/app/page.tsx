@@ -10,6 +10,7 @@ import { TokenDeployment } from '@feydar/shared/types';
 import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import Image from 'next/image';
 
 const PAGE_SIZE = 21;
 
@@ -157,11 +158,21 @@ export default function HomePage() {
     <div className="container mx-auto px-4 py-8">
       <div ref={topRef} className="mb-8">
         <div className="flex items-start justify-between gap-4 mb-2">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">FEY Token Deployments</h1>
-            <p className="text-muted-foreground">
-              Monitor FEY Protocol token deployments on Base in real-time
-            </p>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/feydar-logo.png"
+              alt="FEYDAR Logo"
+              width={48}
+              height={48}
+              className="flex-shrink-0"
+              unoptimized
+            />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">FEYDAR</h1>
+              <p className="text-sm text-muted-foreground">
+                Monitoring FEY Protocol token deployments on Base in real-time
+              </p>
+            </div>
           </div>
           <ThemeToggle />
         </div>

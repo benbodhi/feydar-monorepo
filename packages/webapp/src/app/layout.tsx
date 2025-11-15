@@ -9,14 +9,14 @@ const inter = Inter({ subsets: ['latin'] });
 // This enables the app to be shared and discovered in Farcaster clients
 const frame = {
   version: '1', // Must be "1", not "next"
-  imageUrl: 'https://your-domain.com/og-image.png', // 3:2 aspect ratio recommended
+  imageUrl: 'https://feydar.app/feydar-logo.png', // 3:2 aspect ratio recommended
   button: {
     title: 'Open Feydar', // Max 32 characters
     action: {
       type: 'launch_frame',
       name: 'Feydar',
-      url: 'https://your-domain.com', // Optional, defaults to current URL
-      splashImageUrl: 'https://your-domain.com/icon.png', // 200x200px recommended
+      url: 'https://feydar.app', // Optional, defaults to current URL
+      splashImageUrl: 'https://feydar.app/feydar-logo.png', // 200x200px recommended
       splashBackgroundColor: '#000000',
     },
   },
@@ -25,9 +25,21 @@ const frame = {
 export const metadata: Metadata = {
   title: 'Feydar - FEY Protocol Token Deployments',
   description: 'Monitor FEY Protocol token deployments on Base in real-time',
+  icons: {
+    icon: '/feydar-logo.png',
+    shortcut: '/feydar-logo.png',
+    apple: '/feydar-logo.png',
+  },
   openGraph: {
     title: 'Feydar - FEY Protocol Token Deployments',
     description: 'Monitor FEY Protocol token deployments on Base in real-time',
+    images: ['/feydar-logo.png'],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Feydar - FEY Protocol Token Deployments',
+    description: 'Monitor FEY Protocol token deployments on Base in real-time',
+    images: ['/feydar-logo.png'],
   },
   other: {
     'fc:miniapp': JSON.stringify(frame),
