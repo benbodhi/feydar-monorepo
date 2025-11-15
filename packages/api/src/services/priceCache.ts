@@ -38,7 +38,7 @@ const CACHE_TTL = {
 export async function getPriceData(
   tokenAddress: string,
   poolId: string | null,
-  pairedToken: string | null,
+  feyTokenAddress: string | null, // FEY token address (all tokens are paired with FEY)
   provider: ethers.Provider
 ): Promise<CachedPriceData> {
   const cacheKey = tokenAddress.toLowerCase();
@@ -49,7 +49,7 @@ export async function getPriceData(
     return cached;
   }
 
-  const poolData = await queryPoolData(tokenAddress, poolId, pairedToken, provider);
+  const poolData = await queryPoolData(tokenAddress, poolId, feyTokenAddress, provider);
 
   const result: CachedPriceData = {
     price: poolData.price,

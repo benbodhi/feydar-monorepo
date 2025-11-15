@@ -133,7 +133,7 @@ router.get('/:tokenAddress', async (req, res) => {
 
     const deployment = await prisma.deployment.findUnique({
       where: { tokenAddress: tokenAddress.toLowerCase() },
-      select: { poolId: true, pairedToken: true },
+      select: { poolId: true },
     });
 
     if (deployment?.poolId && process.env.ALCHEMY_API_KEY) {
@@ -153,7 +153,7 @@ router.get('/:tokenAddress', async (req, res) => {
         const poolData = await getPriceData(
           tokenAddress.toLowerCase(),
           deployment.poolId,
-          deployment.pairedToken,
+          FEY_TOKEN_ADDRESS,
           provider
         );
 
@@ -181,7 +181,7 @@ router.get('/:tokenAddress', async (req, res) => {
           }
 
           const priceUSD = dexscreenerData?.priceUsd ? parseFloat(dexscreenerData.priceUsd) : (poolData.price || null);
-          const priceInFEY = await calculatePriceInFEY(priceUSD, deployment.pairedToken, allPairs, tokenAddress.toLowerCase());
+          const priceInFEY = await calculatePriceInFEY(priceUSD, FEY_TOKEN_ADDRESS, allPairs, tokenAddress.toLowerCase());
           // Prefer Dexscreener liquidity, but fall back to calculated pool liquidity
           const liquidityUSD = dexscreenerData?.liquidity?.usd 
             ? parseFloat(dexscreenerData.liquidity.usd) 
@@ -295,17 +295,8 @@ router.get('/:tokenAddress', async (req, res) => {
       return currentLiquidity > prevLiquidity ? current : prev;
     });
 
-    let pairedToken = deployment?.pairedToken || null;
-    if (!pairedToken) {
-      const deploymentData = await prisma.deployment.findUnique({
-        where: { tokenAddress: tokenAddress.toLowerCase() },
-        select: { pairedToken: true },
-      });
-      pairedToken = deploymentData?.pairedToken || null;
-    }
-
     const priceUSD = bestPair.priceUsd ? parseFloat(bestPair.priceUsd) : null;
-    const priceInFEY = await calculatePriceInFEY(priceUSD, pairedToken, data.pairs || [], tokenAddress.toLowerCase());
+    const priceInFEY = await calculatePriceInFEY(priceUSD, FEY_TOKEN_ADDRESS, data.pairs || [], tokenAddress.toLowerCase());
 
     res.json({
       price: priceUSD,

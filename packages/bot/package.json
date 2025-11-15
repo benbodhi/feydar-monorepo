@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/bot.js",
     "dev": "node --watch src/bot.js",
-    "backfill": "node src/scripts/backfill.js",
+    "data-integrity": "node src/scripts/dataIntegrity.js",
+    "backfill": "node src/scripts/dataIntegrity.js",
     "test:names": "node src/scripts/testNameResolution.js",
     "prisma:generate": "cd ../api && pnpm prisma:generate"
   },

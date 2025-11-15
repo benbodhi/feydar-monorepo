@@ -198,7 +198,7 @@ async function getTokenDecimals(
 export async function queryPoolData(
   tokenAddress: string,
   poolId: string | null,
-  pairedToken: string | null,
+  feyTokenAddress: string | null, // FEY token address (all tokens are paired with FEY)
   provider: ethers.Provider
 ): Promise<PoolData> {
   const result: PoolData = {
@@ -270,12 +270,12 @@ export async function queryPoolData(
     }
 
     if (!token0 || !token1) {
-      token0 = pairedToken || WETH_BASE;
+      token0 = feyTokenAddress || WETH_BASE;
       token1 = tokenAddress.toLowerCase();
     }
 
     const token0IsQuote: boolean = token0.toLowerCase() === WETH_BASE.toLowerCase() || 
-                          (pairedToken !== null && token0.toLowerCase() === pairedToken.toLowerCase());
+                          (feyTokenAddress !== null && token0.toLowerCase() === feyTokenAddress.toLowerCase());
     
     const [token0Decimals, token1Decimals] = await Promise.all([
       getTokenDecimals(token0, provider),

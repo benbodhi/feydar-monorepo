@@ -16,7 +16,6 @@ export interface TokenDeployment {
   creatorBps?: number;      // Creator fee in basis points (from TokenRewardAdded event)
   feyStakersBps?: number;    // FEY Stakers fee in basis points (from TokenRewardAdded event)
   poolId?: string;           // Uniswap V4 pool ID (bytes32 as hex)
-  pairedToken?: string;      // Token address this is paired with (FEY, WETH, etc.)
   blockNumber: number;
   createdAt: Date;
 }
@@ -32,7 +31,6 @@ export interface TokenCreatedEventData {
   startingTick?: bigint;
   poolHook?: string;
   poolId?: string;
-  pairedToken?: string;
   locker?: string;
   mevModule?: string;
   extensionsSupply?: bigint;

@@ -27,7 +27,6 @@ model Deployment {
   creatorBps      Int?      // Creator fee in basis points (from TokenRewardAdded event)
   feyStakersBps   Int?      // FEY Stakers fee in basis points (from TokenRewardAdded event)
   poolId          String?   @db.VarChar(66)  // Uniswap V3 pool ID (bytes32 as hex)
-  pairedToken      String?   @db.VarChar(42)  // Token address this is paired with (FEY, WETH, etc.)
   blockNumber     BigInt
   createdAt       DateTime  @default(now())
 

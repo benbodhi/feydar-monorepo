@@ -97,7 +97,6 @@ async function handleTokenDeployment({
             const truncatedDeployerENS = deployerInfo.ens ? deployerInfo.ens.substring(0, 255) : null;
             
             const poolId = fullEventData?.poolId ? (typeof fullEventData.poolId === 'string' ? fullEventData.poolId : `0x${fullEventData.poolId.toString(16).padStart(64, '0')}`) : null;
-            const pairedToken = fullEventData?.pairedToken ? ethers.getAddress(fullEventData.pairedToken) : null;
             
             const creatorBps = fullEventData?.feeSplit?.creatorBps !== undefined ? Number(fullEventData.feeSplit.creatorBps) : null;
             const feyStakersBps = fullEventData?.feeSplit?.feyStakersBps !== undefined ? Number(fullEventData.feeSplit.feyStakersBps) : null;
@@ -131,31 +130,29 @@ async function handleTokenDeployment({
                     deployerENS: truncatedDeployerENS,
                     transactionHash,
                     tokenImage: fullEventData?.tokenImage,
-                    creatorBps,
-                    feyStakersBps,
-                    poolId,
-                    pairedToken,
-                    blockNumber: BigInt(blockNumber || 0),
-                    createdAt,
-                },
-                create: {
-                    tokenAddress,
-                    name: truncatedName,
-                    symbol: truncatedSymbol,
-                    totalSupply: totalSupply.toString(),
-                    deployer,
-                    deployerName: truncatedDeployerName,
-                    deployerBasename: truncatedDeployerBasename,
-                    deployerENS: truncatedDeployerENS,
-                    transactionHash,
-                    tokenImage: fullEventData?.tokenImage,
-                    creatorBps,
-                    feyStakersBps,
-                    poolId,
-                    pairedToken,
-                    blockNumber: BigInt(blockNumber || 0),
-                    createdAt,
-                },
+                                                    creatorBps,
+                                                    feyStakersBps,
+                                                    poolId,
+                                                    blockNumber: BigInt(blockNumber || 0),
+                                                    createdAt,
+                                                },
+                                                create: {
+                                                    tokenAddress,
+                                                    name: truncatedName,
+                                                    symbol: truncatedSymbol,
+                                                    totalSupply: totalSupply.toString(),
+                                                    deployer,
+                                                    deployerName: truncatedDeployerName,
+                                                    deployerBasename: truncatedDeployerBasename,
+                                                    deployerENS: truncatedDeployerENS,
+                                                    transactionHash,
+                                                    tokenImage: fullEventData?.tokenImage,
+                                                    creatorBps,
+                                                    feyStakersBps,
+                                                    poolId,
+                                                    blockNumber: BigInt(blockNumber || 0),
+                                                    createdAt,
+                                                },
             });
             logger.detail('✅ Saved to database');
 
