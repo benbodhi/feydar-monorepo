@@ -57,6 +57,7 @@ export async function fetchTokenPrice(tokenAddress: string): Promise<TokenPriceD
     console.error(`Error fetching price for ${tokenAddress}:`, error);
     return {
       price: null,
+      priceInFEY: null,
       priceChange5m: null,
       priceChange1h: null,
       priceChange6h: null,

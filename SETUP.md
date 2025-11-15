@@ -136,7 +136,11 @@ For services in the same Railway project, always use **Private Network**.
 2. Select your repository (you'll use the same repo for all services)
 3. After the service is created, go to the **Settings** tab
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
-5. Go to **"Build"** section (or **"Settings"** → **"Build"**), **do NOT add a build command** - Railway will auto-detect and run `pnpm install` from the root. The bot doesn't need a build step.
+5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+   ```bash
+   echo "Bot service - no build needed"
+   ```
+   - This prevents Railway from running the root `pnpm run build` command. Railway will still auto-run `pnpm install` from the root.
 6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/bot && node src/bot.js
