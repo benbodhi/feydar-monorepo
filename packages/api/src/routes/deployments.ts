@@ -132,7 +132,6 @@ router.get('/:address', async (req, res) => {
       name: deployment.name,
       symbol: deployment.symbol,
       deployer: deployment.deployer,
-      deployerName: deployment.deployerName,
       deployerBasename: deployment.deployerBasename,
       deployerENS: deployment.deployerENS,
       transactionHash: deployment.transactionHash,
