@@ -106,6 +106,19 @@ async function handleTokenDeployment({
                 logger.detail('Fee Split', `Creator: ${creatorBps} bps (${(creatorBps / 100).toFixed(2)}%), FEY Stakers: ${feyStakersBps} bps (${(feyStakersBps / 100).toFixed(2)}%)`);
             }
 
+            // Get block timestamp for accurate createdAt
+            let createdAt = new Date();
+            if (blockNumber && provider) {
+                try {
+                    const block = await provider.getBlock(blockNumber);
+                    if (block && block.timestamp) {
+                        createdAt = new Date(Number(block.timestamp) * 1000);
+                    }
+                } catch (e) {
+                    logger.warn(`Could not fetch block timestamp for block ${blockNumber}, using current time`);
+                }
+            }
+
             await prisma.deployment.upsert({
                 where: { tokenAddress },
                 update: {
@@ -123,6 +136,7 @@ async function handleTokenDeployment({
                     poolId,
                     pairedToken,
                     blockNumber: BigInt(blockNumber || 0),
+                    createdAt,
                 },
                 create: {
                     tokenAddress,
@@ -140,6 +154,7 @@ async function handleTokenDeployment({
                     poolId,
                     pairedToken,
                     blockNumber: BigInt(blockNumber || 0),
+                    createdAt,
                 },
             });
             logger.detail('✅ Saved to database');
@@ -159,7 +174,7 @@ async function handleTokenDeployment({
                     creatorBps,
                     feyStakersBps,
                     blockNumber: Number(blockNumber || 0),
-                    createdAt: new Date(),
+                    createdAt,
                 });
                 logger.detail('✅ Broadcasted via API');
             } catch (wsError) {

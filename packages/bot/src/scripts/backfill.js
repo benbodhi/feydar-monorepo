@@ -450,22 +450,48 @@ class BackfillService {
                                         { key: 'feyStakersBps', label: 'FEY Stakers BPS' },
                                         { key: 'poolId', label: 'Pool ID' },
                                         { key: 'pairedToken', label: 'Paired Token' },
+                                        { key: 'createdAt', label: 'Created At' },
                                     ];
                                     
                                     for (const field of fieldsToCheck) {
                                         const oldVal = existing[field.key];
                                         const newVal = deploymentData[field.key];
                                         
-                                        // Handle null/undefined comparison
-                                        const oldValStr = oldVal === null || oldVal === undefined ? 'null' : String(oldVal);
-                                        const newValStr = newVal === null || newVal === undefined ? 'null' : String(newVal);
-                                        
-                                        if (oldValStr !== newValStr) {
-                                            changes.push({
-                                                field: field.label,
-                                                old: oldVal === null || oldVal === undefined ? '(missing)' : oldValStr,
-                                                new: newVal === null || newVal === undefined ? '(missing)' : newValStr,
-                                            });
+                                        // Special handling for Date objects
+                                        if (field.key === 'createdAt') {
+                                            const oldDate = oldVal instanceof Date ? oldVal : (oldVal ? new Date(oldVal) : null);
+                                            const newDate = newVal instanceof Date ? newVal : (newVal ? new Date(newVal) : null);
+                                            
+                                            if (oldDate && newDate) {
+                                                // Compare timestamps (ignore milliseconds differences)
+                                                const oldTime = Math.floor(oldDate.getTime() / 1000);
+                                                const newTime = Math.floor(newDate.getTime() / 1000);
+                                                if (oldTime !== newTime) {
+                                                    changes.push({
+                                                        field: field.label,
+                                                        old: oldDate.toISOString(),
+                                                        new: newDate.toISOString(),
+                                                    });
+                                                }
+                                            } else if (oldDate !== newDate) {
+                                                changes.push({
+                                                    field: field.label,
+                                                    old: oldDate ? oldDate.toISOString() : '(missing)',
+                                                    new: newDate ? newDate.toISOString() : '(missing)',
+                                                });
+                                            }
+                                        } else {
+                                            // Handle null/undefined comparison for other fields
+                                            const oldValStr = oldVal === null || oldVal === undefined ? 'null' : String(oldVal);
+                                            const newValStr = newVal === null || newVal === undefined ? 'null' : String(newVal);
+                                            
+                                            if (oldValStr !== newValStr) {
+                                                changes.push({
+                                                    field: field.label,
+                                                    old: oldVal === null || oldVal === undefined ? '(missing)' : oldValStr,
+                                                    new: newVal === null || newVal === undefined ? '(missing)' : newValStr,
+                                                });
+                                            }
                                         }
                                     }
                                     
@@ -490,6 +516,7 @@ class BackfillService {
                                                     feyStakersBps: deploymentData.feyStakersBps,
                                                     poolId: deploymentData.poolId,
                                                     pairedToken: deploymentData.pairedToken,
+                                                    createdAt: deploymentData.createdAt,
                                                 },
                                             })
                                         );
@@ -525,21 +552,47 @@ class BackfillService {
                                         { key: 'feyStakersBps', label: 'FEY Stakers BPS' },
                                         { key: 'poolId', label: 'Pool ID' },
                                         { key: 'pairedToken', label: 'Paired Token' },
+                                        { key: 'createdAt', label: 'Created At' },
                                     ];
                                     
                                     for (const field of fieldsToCheck) {
                                         const oldVal = existingByAddress[field.key];
                                         const newVal = deploymentData[field.key];
                                         
-                                        const oldValStr = oldVal === null || oldVal === undefined ? 'null' : String(oldVal);
-                                        const newValStr = newVal === null || newVal === undefined ? 'null' : String(newVal);
-                                        
-                                        if (oldValStr !== newValStr) {
-                                            changes.push({
-                                                field: field.label,
-                                                old: oldVal === null || oldVal === undefined ? '(missing)' : oldValStr,
-                                                new: newVal === null || newVal === undefined ? '(missing)' : newValStr,
-                                            });
+                                        // Special handling for Date objects
+                                        if (field.key === 'createdAt') {
+                                            const oldDate = oldVal instanceof Date ? oldVal : (oldVal ? new Date(oldVal) : null);
+                                            const newDate = newVal instanceof Date ? newVal : (newVal ? new Date(newVal) : null);
+                                            
+                                            if (oldDate && newDate) {
+                                                // Compare timestamps (ignore milliseconds differences)
+                                                const oldTime = Math.floor(oldDate.getTime() / 1000);
+                                                const newTime = Math.floor(newDate.getTime() / 1000);
+                                                if (oldTime !== newTime) {
+                                                    changes.push({
+                                                        field: field.label,
+                                                        old: oldDate.toISOString(),
+                                                        new: newDate.toISOString(),
+                                                    });
+                                                }
+                                            } else if (oldDate !== newDate) {
+                                                changes.push({
+                                                    field: field.label,
+                                                    old: oldDate ? oldDate.toISOString() : '(missing)',
+                                                    new: newDate ? newDate.toISOString() : '(missing)',
+                                                });
+                                            }
+                                        } else {
+                                            const oldValStr = oldVal === null || oldVal === undefined ? 'null' : String(oldVal);
+                                            const newValStr = newVal === null || newVal === undefined ? 'null' : String(newVal);
+                                            
+                                            if (oldValStr !== newValStr) {
+                                                changes.push({
+                                                    field: field.label,
+                                                    old: oldVal === null || oldVal === undefined ? '(missing)' : oldValStr,
+                                                    new: newVal === null || newVal === undefined ? '(missing)' : newValStr,
+                                                });
+                                            }
                                         }
                                     }
                                     
@@ -564,6 +617,7 @@ class BackfillService {
                                                     feyStakersBps: deploymentData.feyStakersBps,
                                                     poolId: deploymentData.poolId,
                                                     pairedToken: deploymentData.pairedToken,
+                                                    createdAt: deploymentData.createdAt,
                                                 },
                                             })
                                         );

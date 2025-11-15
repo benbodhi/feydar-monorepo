@@ -2,6 +2,14 @@ import { TokenDeployment, DeploymentsResponse, DeploymentsQuery } from '@feydar/
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Log API URL to help with debugging (only in browser, not during SSR)
+if (typeof window !== 'undefined') {
+  console.log('[API] Using API_URL:', API_URL);
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    console.warn('[API] WARNING: NEXT_PUBLIC_API_URL is not set! Using default:', API_URL);
+  }
+}
+
 export async function fetchDeployments(
   query: DeploymentsQuery = {}
 ): Promise<DeploymentsResponse> {
@@ -11,11 +19,23 @@ export async function fetchDeployments(
   if (query.deployer) params.append('deployer', query.deployer);
   if (query.search) params.append('search', query.search);
 
-  const response = await fetch(`${API_URL}/api/deployments?${params.toString()}`);
-  if (!response.ok) {
-    throw new Error('Failed to fetch deployments');
+  const url = `${API_URL}/api/deployments?${params.toString()}`;
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`API Error (${response.status}):`, errorText);
+      throw new Error(`Failed to fetch deployments: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  } catch (error: any) {
+    console.error('Fetch error:', error);
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error(`Network error: Unable to connect to API at ${API_URL}. Please check NEXT_PUBLIC_API_URL environment variable.`);
+    }
+    throw error;
   }
-  return response.json();
 }
 
 export async function fetchLatestDeployments(limit: number = 20): Promise<{

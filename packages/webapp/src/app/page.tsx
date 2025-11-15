@@ -132,10 +132,17 @@ export default function HomePage() {
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-6">FEY Token Deployments</h1>
-        <p className="text-destructive">Error loading deployments. Please try again later.</p>
+        <div className="space-y-2">
+          <p className="text-destructive font-semibold">Error loading deployments</p>
+          <p className="text-sm text-muted-foreground">{errorMessage}</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            Check the browser console for more details. Make sure NEXT_PUBLIC_API_URL is set correctly in your Railway environment variables.
+          </p>
+        </div>
       </div>
     );
   }
