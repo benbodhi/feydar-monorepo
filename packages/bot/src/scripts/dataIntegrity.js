@@ -290,7 +290,6 @@ class DataIntegrityService {
                             break; // Found the event, no need to continue
                         }
                     }
-                }
                 } catch (e) {
                     logger.warn(`  Error extracting fee split from receipt for ${log.transactionHash}: ${e.message}`);
                     // Fee splits might not exist for all tokens, so we continue with null values
