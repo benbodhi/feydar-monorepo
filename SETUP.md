@@ -151,12 +151,10 @@ For services in the same Railway project, always use **Private Network**.
    - `ALCHEMY_API_KEY`
    - `FEY_FACTORY_ADDRESS`
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
-   - `API_URL` - Find this in your **API service**:
-     - Go to your API service in Railway
-     - Click on the service name or go to the **"Settings"** tab
-     - Look for **"Domains"** or **"Networking"** section
-     - Copy the **public URL** (e.g., `https://your-api-service.railway.app`)
-     - If no domain is set, Railway will show a generated URL like `https://your-api-service-production.up.railway.app`
+   - `API_URL` - You can use either:
+     - **Private URL** (recommended for bot): `http://api.railway.internal` (if your API service is named "api")
+     - **Public URL**: The public domain you generate (see API Service setup step 8)
+     - **Note:** Private URLs only work between Railway services. If your API service has a different name, use `http://[service-name].railway.internal`
 
 ### 3. API Service
 
@@ -192,6 +190,14 @@ For services in the same Railway project, always use **Private Network**.
    
    **Note:** Railway will automatically detect and suggest these variables from your source code. You can use the "Suggested Variables" feature to add them quickly.
 
+8. **Generate Public Domain** (required for webapp, optional for bot):
+   - Go to your **API service** main page (click the service name)
+   - Click on **"Networking"** tab (or click "Unexposed" if shown on the service card)
+   - Under **"Public Networking"** section, click **"Generate Domain"**
+   - Railway will create a public URL (e.g., `https://your-api-service-production.up.railway.app`)
+   - **Copy this URL** - you'll need it for the Webapp service
+   - **Note:** The Bot service can use the private URL (`http://api.railway.internal`) instead, but the Webapp **must** use the public URL since it runs in users' browsers
+
 ### 4. Webapp Service
 
 1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
@@ -209,17 +215,19 @@ For services in the same Railway project, always use **Private Network**.
    ```bash
    cd packages/webapp && pnpm start
    ```
-8. Go to **"Variables"** tab and add environment variables:
-   - `NEXT_PUBLIC_API_URL` - Find this in your **API service**:
-     - Go to your API service in Railway
-     - Click on the service name or go to the **"Settings"** tab
-     - Look for **"Domains"** or **"Networking"** section
-     - Copy the **public URL** (e.g., `https://your-api-service.railway.app`)
-     - If no domain is set, Railway will show a generated URL like `https://your-api-service-production.up.railway.app`
-   - `NEXT_PUBLIC_WS_URL` - This is the same as `NEXT_PUBLIC_API_URL` but with `ws://` or `wss://` protocol:
-     - If your API URL is `https://your-api-service.railway.app`, use `wss://your-api-service.railway.app`
-     - If your API URL is `http://your-api-service.railway.app`, use `ws://your-api-service.railway.app`
-     - **Note:** Railway uses HTTPS by default, so use `wss://` (secure WebSocket)
+8. **Generate Public Domain for API** (required for webapp):
+   - Go to your **API service** in Railway
+   - Click on the service name
+   - Go to the **"Networking"** tab (or click "Unexposed" if shown)
+   - Under **"Public Networking"** section, click **"Generate Domain"**
+   - Railway will create a public URL (e.g., `https://your-api-service-production.up.railway.app`)
+   - Copy this URL - you'll need it for the webapp
+   - **Note:** The webapp **must** use the public URL because it runs in users' browsers, which are outside Railway's private network
+
+9. Go to **"Variables"** tab and add environment variables:
+   - `NEXT_PUBLIC_API_URL` - Use the public URL you just generated (e.g., `https://your-api-service-production.up.railway.app`)
+   - `NEXT_PUBLIC_WS_URL` - Use the same URL but with `wss://` protocol (e.g., `wss://your-api-service-production.up.railway.app`)
+     - **Note:** Railway uses HTTPS, so always use `wss://` (secure WebSocket) for WebSocket connections
 
 ### 5. Run Migrations
 
