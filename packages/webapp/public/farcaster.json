@@ -7,11 +7,11 @@
   "frame": {
     "version": "1",
     "name": "Feydar",
-    "iconUrl": "https://feydar.app/icon.png",
+    "iconUrl": "https://feydar.app/feydar-logo.png",
     "homeUrl": "https://feydar.app",
-    "imageUrl": "https://feydar.app/og-image.png",
+    "imageUrl": "https://feydar.app/feydar-fc-miniapp-cover.png",
     "buttonTitle": "Open Feydar",
-    "splashImageUrl": "https://feydar.app/icon.png",
+    "splashImageUrl": "https://feydar.app/feydar-logo.png",
     "splashBackgroundColor": "#000000"
   }
 }

@@ -233,6 +233,10 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
             >
               <div className="overflow-hidden">
                 <div className="space-y-6 pt-4">
+                {/* Note about price data availability */}
+                <p className="text-xs text-muted-foreground">
+                  Price data may not be available yet.
+                </p>
                 {/* Price Section */}
                 <div className="space-y-4">
                   {/* Price Row */}
@@ -243,7 +247,7 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                         {(() => {
                           const formatted = formatPrice(priceData.price);
                           if (typeof formatted === 'string') {
-                            return formatted;
+                            return formatted === 'N/A' ? '?' : formatted;
                           }
                           return (
                             <>
@@ -260,7 +264,7 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                     <div className="flex-1 min-w-[120px] text-right">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">FEY</p>
                       <p className="text-lg font-semibold">
-                        {priceInFEY !== null ? `${priceInFEY.toFixed(6)} FEY` : 'N/A'}
+                        {priceInFEY !== null ? `${priceInFEY.toFixed(6)} FEY` : '?'}
                       </p>
                     </div>
                   </div>
@@ -273,7 +277,7 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <p className="text-sm sm:text-base font-semibold cursor-help break-words">N/A (smol)</p>
+                              <p className="text-sm sm:text-base font-semibold cursor-help break-words">? (smol)</p>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Liquidity data not available</p>
@@ -286,11 +290,21 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">Market Cap</p>
-                      <p className="text-sm sm:text-base font-semibold break-words">{formatCompactCurrency(priceData.marketCap)}</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">
+                        {(() => {
+                          const formatted = formatCompactCurrency(priceData.marketCap);
+                          return formatted === 'N/A' ? '?' : formatted;
+                        })()}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">FDV</p>
-                      <p className="text-sm sm:text-base font-semibold break-words">{formatCompactCurrency(fdv)}</p>
+                      <p className="text-sm sm:text-base font-semibold break-words">
+                        {(() => {
+                          const formatted = formatCompactCurrency(fdv);
+                          return formatted === 'N/A' ? '?' : formatted;
+                        })()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -307,7 +321,10 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                           priceData.priceChange5m !== null && priceData.priceChange5m >= 0 ? 'text-green-medium dark:text-green-light' : 
                           priceData.priceChange5m !== null ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {formatPercentChange(priceData.priceChange5m)}
+                          {(() => {
+                            const formatted = formatPercentChange(priceData.priceChange5m);
+                            return formatted === 'N/A' ? '?' : formatted;
+                          })()}
                         </p>
                       </div>
                       <div className="text-center">
@@ -316,7 +333,10 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                           priceData.priceChange1h !== null && priceData.priceChange1h >= 0 ? 'text-green-medium dark:text-green-light' : 
                           priceData.priceChange1h !== null ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {formatPercentChange(priceData.priceChange1h)}
+                          {(() => {
+                            const formatted = formatPercentChange(priceData.priceChange1h);
+                            return formatted === 'N/A' ? '?' : formatted;
+                          })()}
                         </p>
                       </div>
                       <div className="text-center">
@@ -325,7 +345,10 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                           priceData.priceChange6h !== null && priceData.priceChange6h >= 0 ? 'text-green-medium dark:text-green-light' : 
                           priceData.priceChange6h !== null ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {formatPercentChange(priceData.priceChange6h)}
+                          {(() => {
+                            const formatted = formatPercentChange(priceData.priceChange6h);
+                            return formatted === 'N/A' ? '?' : formatted;
+                          })()}
                         </p>
                       </div>
                       <div className="text-center">
@@ -334,7 +357,10 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                           priceData.priceChange24h !== null && priceData.priceChange24h >= 0 ? 'text-green-medium dark:text-green-light' : 
                           priceData.priceChange24h !== null ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {formatPercentChange(priceData.priceChange24h)}
+                          {(() => {
+                            const formatted = formatPercentChange(priceData.priceChange24h);
+                            return formatted === 'N/A' ? '?' : formatted;
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -346,19 +372,23 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
-                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                        <p className="text-sm font-semibold text-muted-foreground">?</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
-                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                        <p className="text-sm font-semibold text-muted-foreground">?</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
-                        <p className="text-sm font-semibold text-muted-foreground">N/A</p>
+                        <p className="text-sm font-semibold text-muted-foreground">?</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
-                        <p className="text-sm font-semibold">{formatCurrency(priceData.volume24h)}</p>
+                        <p className={`text-sm font-semibold ${
+                          priceData.volume24h === null || isNaN(priceData.volume24h) ? 'text-muted-foreground' : ''
+                        }`}>
+                          {priceData.volume24h === null || isNaN(priceData.volume24h) ? '?' : formatCurrency(priceData.volume24h)}
+                        </p>
                       </div>
                     </div>
                   </div>
