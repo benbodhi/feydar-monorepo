@@ -1,15 +1,16 @@
+'use client';
+
 import { TokenDeployment } from '@feydar/shared/types';
 import { formatIPFSUrl, truncateAddress } from '@feydar/shared/utils';
 import { createAddressLink } from '@feydar/shared/constants';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TradeLinks } from './TradeLinks';
-import { ExplorerLinks } from './ExplorerLinks';
+import { BuyButton, BuyButtonRef } from './BuyButton';
 import Image from 'next/image';
 import { ExternalLink, Copy, Check, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTokenPrice, formatPrice, formatCurrency, formatCompactCurrency, formatPercentChange } from '@/lib/price';
 import { formatRelativeTime, formatAbsoluteTime } from '@/lib/utils';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, forwardRef } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface DeploymentCardProps {
@@ -17,7 +18,8 @@ interface DeploymentCardProps {
   priority?: boolean; // Set to true for single token pages (above the fold)
 }
 
-export function DeploymentCard({ deployment, priority = false }: DeploymentCardProps) {
+export const DeploymentCard = forwardRef<BuyButtonRef, DeploymentCardProps>(
+  ({ deployment, priority = false }, ref) => {
   // Build deployer display with stacked information
   const deployerLines: string[] = [];
   if (deployment.deployerBasename) {
@@ -168,15 +170,6 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                   <Copy className="h-3.5 w-3.5" />
                 )}
               </button>
-              <a
-                href={`https://basescan.org/token/${deployment.tokenAddress}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
             </div>
             <div className="mt-2 relative w-full aspect-square rounded-lg overflow-hidden bg-black">
               {deployment.currentImageUrl || deployment.tokenImage ? (
@@ -207,10 +200,9 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Trade Section */}
+        {/* Buy Section - Replaces TradeLinks */}
         <div className="pb-6 border-b">
-          <p className="text-sm text-foreground mb-2">Trade</p>
-          <TradeLinks tokenAddress={deployment.tokenAddress} />
+          <BuyButton ref={ref} tokenAddress={deployment.tokenAddress} tokenName={deployment.symbol} />
         </div>
 
         {/* Price and Performance Section - Collapsible */}
@@ -405,18 +397,11 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-sm text-foreground mb-2">Creator</p>
-            <a
-              href={createAddressLink(deployment.deployer)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline font-mono text-xs flex flex-col items-start gap-0.5"
-            >
+            <div className="text-primary font-mono text-xs flex flex-col items-start gap-0.5">
               {deployerLines.map((line, index) => (
-                <span key={index} className="flex items-center gap-1">
-                  {line} {index === deployerLines.length - 1 && <ExternalLink className="h-3 w-3" />}
-                </span>
+                <span key={index}>{line}</span>
               ))}
-            </a>
+            </div>
           </div>
           {/* Fee Split Display */}
           {deployment.creatorBps != null && 
@@ -491,15 +476,10 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
             </div>
           ) : null}
         </div>
-
-        <div className="pt-6 border-t -mb-6">
-          <p className="text-sm text-foreground mb-2">Explore</p>
-          <ExplorerLinks
-            tokenAddress={deployment.tokenAddress}
-          />
-        </div>
       </CardContent>
     </Card>
   );
-}
+  }
+);
 
+DeploymentCard.displayName = 'DeploymentCard';

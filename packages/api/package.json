@@ -5,6 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "prebuild": "prisma generate",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
@@ -13,6 +14,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@farcaster/miniapp-node": "^0.1.0",
     "@feydar/shared": "workspace:*",
     "@prisma/client": "^5.9.1",
     "cors": "^2.8.5",

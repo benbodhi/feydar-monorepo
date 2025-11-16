@@ -8,17 +8,16 @@ const inter = Inter({ subsets: ['latin'] });
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app';
 
 // Farcaster miniapp embed metadata for sharing and discovery
-// This enables the app to be shared and discovered in Farcaster clients
 const frame = {
-  version: '1', // Must be "1", not "next"
-  imageUrl: `${APP_URL}/feydar-farcaster-miniapp-cover.png`, // Landscape cover image
+  version: '1',
+  imageUrl: `${APP_URL}/feydar-farcaster-miniapp-cover.png`,
   button: {
-    title: 'Open Feydar', // Max 32 characters
+    title: 'Open Feydar',
     action: {
       type: 'launch_frame',
       name: 'Feydar',
-      url: APP_URL, // Optional, defaults to current URL
-      splashImageUrl: `${APP_URL}/feydar-farcaster-miniapp-splash.png`, // Splash screen
+      url: APP_URL,
+      splashImageUrl: `${APP_URL}/feydar-farcaster-miniapp-splash.png`,
       splashBackgroundColor: '#000000',
     },
   },
@@ -36,13 +35,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Feydar - FEY Protocol Token Deployments',
     description: 'Monitor FEY Protocol token deployments on Base in real-time',
-    images: ['/feydar-farcaster-miniapp-cover.png'], // Use landscape cover for embeds
+    images: ['/feydar-farcaster-miniapp-cover.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Feydar - FEY Protocol Token Deployments',
     description: 'Monitor FEY Protocol token deployments on Base in real-time',
-    images: ['/feydar-farcaster-miniapp-cover.png'], // Use landscape cover for Twitter
+    images: ['/feydar-farcaster-miniapp-cover.png'],
   },
   other: {
     'fc:miniapp': JSON.stringify(frame),

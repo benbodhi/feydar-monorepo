@@ -28,7 +28,11 @@ pnpm install
 DATABASE_URL=postgresql://user:password@localhost:5432/feydar
 PORT=3001
 NODE_ENV=development
-CORS_ORIGIN=http://localhost:3000
+# CORS_ORIGIN is optional - if not set, defaults to http://localhost:3000,http://localhost:3002,http://localhost:3001
+# For development with both webapp and miniapp, you can set:
+# CORS_ORIGIN=http://localhost:3000,http://localhost:3002
+# For production, set to your production URLs (comma-separated):
+# CORS_ORIGIN=https://your-webapp.railway.app,https://your-miniapp.railway.app
 ```
 
 3. Run database migrations:
@@ -53,13 +57,21 @@ pnpm build && pnpm start
 ### REST
 
 - `GET /health` - Health check
-- `GET /api/deployments` - List deployments (with pagination, filters)
+- `GET /token` - List tokens (with pagination, filters)
   - Query params: `page`, `pageSize`, `deployer`, `search`
-- `GET /api/deployments/latest` - Get latest N deployments
+- `GET /token/latest` - Get latest N tokens
   - Query params: `limit` (default: 20, max: 100)
-- `GET /api/deployments/:address` - Get deployment by token address
+- `GET /token/:address` - Get token by address
+- `GET /token/:address/adjacent` - Get adjacent tokens (older and newer) for navigation
+  - Returns: `{ older: TokenDeployment | null, newer: TokenDeployment | null }`
 - `GET /api/price/:tokenAddress` - Get token price data (Uniswap V4 + Dexscreener)
 - `POST /api/broadcast` - Internal endpoint for bot to trigger WebSocket broadcast
+- `POST /api/notifications/send` - Internal endpoint for bot to send Farcaster notifications
+  - Body: `TokenDeployment` object
+  - Returns: `{ success: boolean, sent: number, failed: number }`
+- `POST /api/webhook` - Webhook endpoint for Farcaster miniapp events
+  - Handles: `miniapp_added`, `miniapp_removed`, `notifications_enabled`, `notifications_disabled`
+  - Used for managing notification subscriptions
 
 ### WebSocket
 
@@ -75,7 +87,9 @@ pnpm build && pnpm start
 **Recommended:**
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (development/production)
-- `CORS_ORIGIN` - Allowed CORS origin (default: `*`)
+- `CORS_ORIGIN` - Comma-separated list of allowed origins (defaults to `http://localhost:3000,http://localhost:3002,http://localhost:3001` for development)
+  - **Development:** `http://localhost:3000,http://localhost:3002` (webapp and miniapp)
+  - **Production:** `https://your-webapp.railway.app,https://your-miniapp.railway.app` (your production URLs)
 
 **Optional:**
 - `FEY_TOKEN_ADDRESS` - FEY token contract address (optional, used for price calculations in FEY)

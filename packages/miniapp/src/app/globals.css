@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors - White background, Black text */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    
+    /* Primary - Medium green (#3EA34B) */
+    --primary: 130 45% 45%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - Light yellow (#FFFFB0) */
+    --secondary: 60 100% 85%;
+    --secondary-foreground: 0 0% 0%;
+    
+    /* Muted - Light gray for subtle elements */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    
+    /* Accent - Light green (#4FC65F) */
+    --accent: 130 50% 54%;
+    --accent-foreground: 0 0% 0%;
+    
+    /* Destructive - Red for errors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Border and input */
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    
+    /* Ring - Medium green for focus */
+    --ring: 130 45% 45%;
+    
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Base colors - Black background, White text */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    
+    /* Primary - Light green (#4FC65F) for better contrast on dark */
+    --primary: 130 50% 54%;
+    --primary-foreground: 0 0% 0%;
+    
+    /* Secondary - Orange (#EAA80C) */
+    --secondary: 42 90% 48%;
+    --secondary-foreground: 0 0% 0%;
+    
+    /* Muted - Dark gray for subtle elements */
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    
+    /* Accent - Medium green (#3EA34B) */
+    --accent: 130 45% 45%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive - Red for errors */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Border and input */
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    
+    /* Ring - Light green for focus */
+    --ring: 130 50% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+

@@ -24,6 +24,25 @@ async function broadcastDeployment(deployment) {
     }
 }
 
+async function sendDeploymentNotifications(deployment) {
+    const apiUrl = process.env.API_URL || 'http://localhost:3001';
+    try {
+        const response = await fetch(`${apiUrl}/api/notifications/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(deployment),
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        logger.warn(`Failed to send notifications: ${error.message}`);
+        return null;
+    }
+}
+
 /**
  * Handles new token creation events from FEY factory
  */
@@ -185,24 +204,36 @@ async function handleTokenDeployment({
             });
             logger.detail('✅ Saved to database');
 
+            const deploymentData = {
+                tokenAddress,
+                name,
+                symbol,
+                deployer,
+                deployerBasename: deployerInfo.basename,
+                deployerENS: deployerInfo.ens,
+                transactionHash,
+                tokenImage: fullEventData?.tokenImage,
+                creatorBps,
+                feyStakersBps,
+                blockNumber: Number(blockNumber || 0),
+                createdAt,
+            };
+
             try {
-                await broadcastDeployment({
-                    tokenAddress,
-                    name,
-                    symbol,
-                    deployer,
-                    deployerBasename: deployerInfo.basename,
-                    deployerENS: deployerInfo.ens,
-                    transactionHash,
-                    tokenImage: fullEventData?.tokenImage,
-                    creatorBps,
-                    feyStakersBps,
-                    blockNumber: Number(blockNumber || 0),
-                    createdAt,
-                });
+                await broadcastDeployment(deploymentData);
                 logger.detail('✅ Broadcasted via API');
             } catch (wsError) {
                 logger.warn(`Broadcast error: ${wsError.message}`);
+            }
+
+            // Send Farcaster notifications (non-blocking)
+            try {
+                const notificationResult = await sendDeploymentNotifications(deploymentData);
+                if (notificationResult) {
+                    logger.detail(`✅ Sent notifications: ${notificationResult.sent} sent, ${notificationResult.failed} failed`);
+                }
+            } catch (notifError) {
+                logger.warn(`Notification error: ${notifError.message}`);
             }
 
             // Fetch contract data asynchronously after initial save

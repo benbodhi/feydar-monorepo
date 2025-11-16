@@ -21,6 +21,8 @@ export async function fetchDeployments(
 
   const url = `${API_URL}/token?${params.toString()}`;
   
+  console.log('[API] Fetching from URL:', url);
+  
   try {
     const response = await fetch(url);
     if (!response.ok) {

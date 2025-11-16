@@ -4,8 +4,9 @@
   "private": true,
   "description": "FEY Protocol token deployment monitor - Discord bot, webapp, and Farcaster miniapp",
   "scripts": {
-    "dev": "concurrently -n bot,api,webapp -c blue,green,yellow \"pnpm --filter bot dev\" \"pnpm --filter api dev\" \"pnpm --filter webapp dev\"",
-    "build": "pnpm --filter shared build && pnpm --filter bot build && pnpm --filter api build && pnpm --filter webapp build",
+    "dev": "concurrently -n bot,api,webapp,miniapp -c blue,green,yellow,magenta \"pnpm --filter bot dev\" \"pnpm --filter api dev\" \"pnpm --filter webapp dev\" \"pnpm --filter miniapp dev\"",
+    "dev:no-bot": "concurrently -n api,webapp,miniapp -c green,yellow,magenta \"pnpm --filter api dev\" \"pnpm --filter webapp dev\" \"pnpm --filter miniapp dev\"",
+    "build": "pnpm --filter shared build && pnpm --filter bot build && pnpm --filter api build && pnpm --filter webapp build && pnpm --filter miniapp build",
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck"
   },

@@ -45,7 +45,9 @@ pnpm install
    DATABASE_URL=postgresql://user:password@localhost:5432/feydar
    PORT=3001
    NODE_ENV=development
-   CORS_ORIGIN=http://localhost:3000
+   # CORS_ORIGIN is optional - defaults to http://localhost:3000,http://localhost:3002,http://localhost:3001
+   # If you need to override, set it to comma-separated origins:
+   # CORS_ORIGIN=http://localhost:3000,http://localhost:3002
    ALCHEMY_API_KEY=your_alchemy_api_key
    ```
    
@@ -83,6 +85,7 @@ This will start:
 - Bot (monitoring blockchain)
 - API server (port 3001)
 - Webapp (port 3000)
+- Miniapp (port 3002, if available)
 
 ### Individual services
 
@@ -101,6 +104,12 @@ pnpm dev
 **Webapp:**
 ```bash
 cd packages/webapp
+pnpm dev
+```
+
+**Miniapp:**
+```bash
+cd packages/miniapp
 pnpm dev
 ```
 
@@ -180,7 +189,9 @@ For services in the same Railway project, always use **Private Network**.
    **Recommended:**
    - `PORT=3001` (defaults to 3001 if not set)
    - `NODE_ENV=production`
-   - `CORS_ORIGIN` (your webapp URL, e.g., `https://your-webapp.railway.app`)
+   - `CORS_ORIGIN` - Comma-separated list of allowed origins (required for production)
+     - Example: `https://your-webapp.railway.app,https://your-miniapp.railway.app,https://feydar.app`
+     - Include all production URLs: webapp, miniapp, and any custom domains
    
    **Optional:**
    - `FEY_TOKEN_ADDRESS` (FEY token contract address, used for price calculations in FEY)
@@ -376,14 +387,16 @@ Blockchain Event → Bot → Database → API → Webapp
 
 - **Bot**: Monitors blockchain, sends Discord notifications, saves to DB
 - **API**: Serves REST endpoints and WebSocket for real-time updates
-- **Webapp**: Displays deployments, works as Farcaster miniapp
+- **Webapp**: Displays deployments (standalone webapp)
+- **Miniapp**: Farcaster miniapp (separate package)
 - **Database**: PostgreSQL with Prisma ORM
 
 ## Next Steps
 
-1. Update `farcaster.json` in webapp with production URL
-2. Register miniapp with Farcaster
-3. Set up monitoring and alerts
-4. Configure production environment variables
-5. Set up CI/CD pipeline
+1. (Optional) Deploy miniapp service (see [Miniapp README](./packages/miniapp/README.md))
+2. Update `farcaster.json` in miniapp with production URL
+3. Register miniapp with Farcaster
+4. Set up monitoring and alerts
+5. Configure production environment variables
+6. Set up CI/CD pipeline
 

@@ -9,7 +9,8 @@ feydar-monorepo/
 ├── packages/
 │   ├── bot/          # Discord bot monitoring blockchain events
 │   ├── api/          # API server (REST + WebSocket)
-│   ├── webapp/       # Next.js webapp + Farcaster miniapp
+│   ├── webapp/       # Next.js webapp
+│   ├── miniapp/      # Farcaster miniapp (standalone)
 │   └── shared/       # Shared types, utilities, constants
 ├── package.json
 └── pnpm-workspace.yaml
@@ -29,7 +30,8 @@ feydar-monorepo/
 - **[Setup & Deployment](./SETUP.md)** - Complete setup guide and Railway deployment
 - **[API Documentation](./packages/api/README.md)** - API endpoints and configuration
 - **[Bot Documentation](./packages/bot/README.md)** - Bot setup and features
-- **[Webapp Documentation](./packages/webapp/README.md)** - Webapp setup and Farcaster miniapp
+- **[Webapp Documentation](./packages/webapp/README.md)** - Webapp setup
+- **[Miniapp Documentation](./packages/miniapp/README.md)** - Farcaster miniapp setup
 
 ## Getting Started
 
@@ -65,6 +67,9 @@ pnpm --filter api dev
 
 # Webapp only
 pnpm --filter webapp dev
+
+# Miniapp only
+pnpm --filter miniapp dev
 ```
 
 ### Building
@@ -80,6 +85,7 @@ Deploy to Railway with separate services for:
 - Bot (long-running process)
 - API (Express server)
 - Webapp (Next.js)
+- Miniapp (Next.js, Farcaster miniapp)
 
 See [SETUP.md](./SETUP.md) for detailed Railway deployment instructions, or individual package READMEs for package-specific details.
 

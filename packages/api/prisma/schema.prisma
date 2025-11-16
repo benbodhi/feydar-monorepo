@@ -40,3 +40,20 @@ model Deployment {
   @@map("deployments")
 }
 
+model NotificationSubscription {
+  id          Int       @id @default(autoincrement())
+  fid         Int       // Farcaster ID
+  token       String    @db.Text // Notification token from Farcaster client
+  url         String    @db.Text // Notification endpoint URL
+  enabled     Boolean   @default(true)
+  clientAppId String?   @db.VarChar(255) // Optional: for multi-client support
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([fid, token], name: "fid_token") // One subscription per FID + token combination
+  @@index([fid])
+  @@index([enabled])
+  @@index([token])
+  @@map("notification_subscriptions")
+}
+
