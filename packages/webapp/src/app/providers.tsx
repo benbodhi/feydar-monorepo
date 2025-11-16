@@ -2,9 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { Suspense, useState } from 'react';
-import { FarcasterSDK } from '@/components/FarcasterSDK';
-import { FarcasterRedirect } from '@/components/FarcasterRedirect';
+import { useState } from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,10 +20,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <Suspense fallback={null}>
-          <FarcasterRedirect />
-        </Suspense>
-        <FarcasterSDK />
         {children}
       </QueryClientProvider>
     </ThemeProvider>

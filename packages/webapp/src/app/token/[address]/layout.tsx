@@ -42,26 +42,10 @@ export async function generateMetadata({
   // Use token image if available, otherwise use default cover image
   const tokenImageUrl = deployment.currentImageUrl || deployment.tokenImage
     ? formatIPFSUrl(deployment.currentImageUrl || deployment.tokenImage || '')
-    : `${APP_URL}/feydar-farcaster-miniapp-cover.png`;
+    : `${APP_URL}/feydar-cover.png`;
 
-  // For embed, use landscape cover image (feydar-farcaster-miniapp-cover.png)
-  const embedImageUrl = `${APP_URL}/feydar-farcaster-miniapp-cover.png`;
-
-  // Create embed metadata for this specific deployment
-  const embed = {
-    version: '1',
-    imageUrl: embedImageUrl, // Use landscape cover for embeds
-    button: {
-      title: `View ${deployment.symbol}`,
-      action: {
-        type: 'launch_frame',
-        name: 'Feydar',
-        url: `${APP_URL}/token/${address}`,
-        splashImageUrl: tokenImageUrl, // Use token image for splash
-        splashBackgroundColor: '#000000',
-      },
-    },
-  };
+  // Use token image for embeds, fallback to cover image
+  const embedImageUrl = tokenImageUrl;
 
   return {
     metadataBase: new URL(APP_URL),
@@ -70,16 +54,13 @@ export async function generateMetadata({
     openGraph: {
       title: `${deployment.name} (${deployment.symbol})`,
       description: `Token deployment on FEY Protocol`,
-      images: [embedImageUrl], // Use landscape cover for OG image
+      images: [embedImageUrl],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${deployment.name} (${deployment.symbol})`,
       description: `Token deployment on FEY Protocol`,
-      images: [embedImageUrl], // Use landscape cover for Twitter
-    },
-    other: {
-      'fc:miniapp': JSON.stringify(embed),
+      images: [embedImageUrl],
     },
   };
 }

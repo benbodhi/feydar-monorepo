@@ -16,23 +16,6 @@ function ensureProtocol(url: string): string {
 
 const APP_URL = ensureProtocol(process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app');
 
-// Farcaster miniapp embed metadata for sharing and discovery
-// This enables the app to be shared and discovered in Farcaster clients
-const frame = {
-  version: '1', // Must be "1", not "next"
-  imageUrl: `${APP_URL}/feydar-farcaster-miniapp-cover.png`, // Landscape cover image
-  button: {
-    title: 'Open Feydar', // Max 32 characters
-    action: {
-      type: 'launch_frame',
-      name: 'Feydar',
-      url: APP_URL, // Optional, defaults to current URL
-      splashImageUrl: `${APP_URL}/feydar-farcaster-miniapp-splash.png`, // Splash screen
-      splashBackgroundColor: '#000000',
-    },
-  },
-};
-
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: 'FEYDAR - Catch new FEY tokens',
@@ -45,16 +28,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'FEYDAR - Catch new FEY tokens',
     description: 'Real-time FEY token launches! To ape or not to ape, that is the question.',
-    images: ['/feydar-farcaster-miniapp-cover.png'], // Use landscape cover for embeds
+    images: ['/feydar-cover.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FEYDAR - Catch new FEY tokens',
     description: 'Real-time FEY token launches! To ape or not to ape, that is the question.',
-    images: ['/feydar-farcaster-miniapp-cover.png'], // Use landscape cover for Twitter
-  },
-  other: {
-    'fc:miniapp': JSON.stringify(frame),
+    images: ['/feydar-cover.png'],
   },
 };
 
