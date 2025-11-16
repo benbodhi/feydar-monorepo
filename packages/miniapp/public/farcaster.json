@@ -13,6 +13,6 @@
     "buttonTitle": "Open FEYDAR",
     "splashImageUrl": "https://miniapp.feydar.app/feydar-farcaster-miniapp-splash.png.png",
     "splashBackgroundColor": "#000000",
-    "webhookUrl": "https://miniapp.feydar.app/api/webhook"
+    "webhookUrl": "https://api.neynar.com/f/app/89384824-1b1f-4710-84d3-e4a86dc03b83/event"
   }
 }

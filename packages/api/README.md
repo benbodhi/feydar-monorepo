@@ -69,9 +69,9 @@ pnpm build && pnpm start
 - `POST /api/notifications/send` - Internal endpoint for bot to send Farcaster notifications
   - Body: `TokenDeployment` object
   - Returns: `{ success: boolean, sent: number, failed: number }`
-- `POST /api/webhook` - Webhook endpoint for Farcaster miniapp events
-  - Handles: `miniapp_added`, `miniapp_removed`, `notifications_enabled`, `notifications_disabled`
-  - Used for managing notification subscriptions
+  - Uses Neynar API to send notifications to all subscribed users
+- `POST /api/webhook` - Webhook endpoint (legacy, not used when using Neynar)
+  - Note: When using Neynar, webhook events go to Neynar's webhook URL instead
 
 ### WebSocket
 
@@ -83,6 +83,12 @@ pnpm build && pnpm start
 **Required:**
 - `DATABASE_URL` - PostgreSQL connection string (required)
 - `ALCHEMY_API_KEY` - Alchemy API key for Base mainnet and Ethereum mainnet (required for price data from Uniswap V4 pools)
+
+**Required for Notifications:**
+- `NEYNAR_API_KEY` - Neynar API key for sending Farcaster notifications (required)
+  - Get your API key from [Neynar](https://neynar.com)
+  - Used to send notifications via Neynar's API
+  - Neynar handles token management, rate limiting, and permission revokes automatically
 
 **Recommended:**
 - `PORT` - Server port (default: 3001)

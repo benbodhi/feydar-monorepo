@@ -1,51 +1,12 @@
-import { prisma } from '../db/client';
-
-interface NotificationData {
-  title: string;
-  body: string;
-  url?: string;
-}
-
-/**
- * Send a notification to a single user
- */
-export async function sendNotificationToUser(
-  token: string,
-  url: string,
-  notification: NotificationData
-): Promise<boolean> {
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          url: notification.url,
-        },
-        // Use notificationId for deduplication (24-hour window)
-        notificationId: `${notification.title}-${Date.now()}`,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`[Notifications] Failed to send to ${url}: ${response.status} ${response.statusText}`);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error(`[Notifications] Error sending to ${url}:`, error);
-    return false;
-  }
-}
-
 /**
  * Send notifications to all subscribed users for a new token deployment
+ * Uses Neynar's API to send notifications to all users who have added the miniapp
+ * 
+ * Neynar automatically:
+ * - Manages notification tokens
+ * - Handles permission revokes
+ * - Filters out disabled tokens
+ * - Respects rate limits (1 per 30 seconds, 100 per day per token)
  */
 export async function sendDeploymentNotifications(
   deployment: {
@@ -57,13 +18,10 @@ export async function sendDeploymentNotifications(
     deployerENS?: string | null;
   }
 ): Promise<{ sent: number; failed: number }> {
-  // Get all enabled notification subscriptions
-  const subscriptions = await prisma.notificationSubscription.findMany({
-    where: { enabled: true },
-  });
-
-  if (subscriptions.length === 0) {
-    console.log('[Notifications] No active subscriptions');
+  const neynarApiKey = process.env.NEYNAR_API_KEY;
+  
+  if (!neynarApiKey) {
+    console.error('[Notifications] NEYNAR_API_KEY is not set');
     return { sent: 0, failed: 0 };
   }
 
@@ -78,28 +36,46 @@ export async function sendDeploymentNotifications(
 
   // Create notification content
   // URL includes ?buy=true to trigger buy button automatically
-  const notification: NotificationData = {
+  const notification = {
     title: 'New FEY Token!',
     body: `${deployerName} created ${deployment.name} (${deployment.symbol}), click to ape right now and see new tokens deployed in real time from the timeline!`,
-    url: `https://feydar.app/token/${deployment.tokenAddress}?buy=true`,
+    url: `https://miniapp.feydar.app/token/${deployment.tokenAddress}?buy=true`,
+    // Use notificationId for deduplication (24-hour window)
+    notificationId: `fey-token-${deployment.tokenAddress}-${Date.now()}`,
   };
 
-  console.log(`[Notifications] Sending to ${subscriptions.length} subscribers...`);
+  try {
+    console.log('[Notifications] Sending notification via Neynar API...');
+    
+    const response = await fetch('https://api.neynar.com/v2/farcaster/frame/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_key': neynarApiKey,
+      },
+      body: JSON.stringify(notification),
+    });
 
-  // Send notifications (with rate limiting consideration)
-  // Rate limits: 1 per 30 seconds, 100 per day per token
-  // We'll send to all, but the Farcaster client will handle rate limiting
-  const results = await Promise.allSettled(
-    subscriptions.map((sub: { token: string; url: string }) =>
-      sendNotificationToUser(sub.token, sub.url, notification)
-    )
-  );
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[Notifications] Neynar API error (${response.status}):`, errorText);
+      return { sent: 0, failed: 1 };
+    }
 
-  const sent = results.filter((r: PromiseSettledResult<boolean>) => r.status === 'fulfilled' && r.value === true).length;
-  const failed = results.length - sent;
-
-  console.log(`[Notifications] Sent: ${sent}, Failed: ${failed}`);
-
-  return { sent, failed };
+    const result = await response.json();
+    
+    // Neynar returns success status
+    // The actual number of notifications sent is managed by Neynar
+    // and can be viewed in their dashboard
+    console.log('[Notifications] Notification sent successfully via Neynar');
+    console.log('[Notifications] Response:', result);
+    
+    // Neynar handles sending to all subscribed users automatically
+    // We return success, but exact counts are managed by Neynar
+    return { sent: 1, failed: 0 };
+  } catch (error: any) {
+    console.error('[Notifications] Error sending notification via Neynar:', error);
+    return { sent: 0, failed: 1 };
+  }
 }
 
