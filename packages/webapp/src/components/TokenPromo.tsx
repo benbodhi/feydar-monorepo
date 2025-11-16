@@ -68,7 +68,7 @@ export function TokenPromo() {
         </div>
 
         {/* Market Cap - Vertically Centered */}
-        {!isLoadingPrice && priceData?.marketCap !== null && (
+        {!isLoadingPrice && priceData && priceData.marketCap !== null && (
           <div className="text-center sm:text-right flex-shrink-0">
             <p className="text-xs text-muted-foreground mb-1">Market Cap</p>
             <p className="text-lg font-semibold">
