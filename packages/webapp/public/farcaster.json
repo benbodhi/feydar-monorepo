@@ -9,8 +9,8 @@
     "name": "Feydar",
     "iconUrl": "https://feydar.app/feydar-logo.png",
     "homeUrl": "https://feydar.app",
-    "imageUrl": "https://feydar.app/feydar-fc-miniapp-cover.png",
-    "buttonTitle": "Open Feydar",
+    "imageUrl": "https://feydar.app/feydar-farcaster-miniapp-cover.png",
+    "buttonTitle": "Open FEYDAR",
     "splashImageUrl": "https://feydar.app/feydar-farcaster-miniapp-splash.png",
     "splashBackgroundColor": "#000000",
     "webhookUrl": "https://feydar.app/api/webhook"
