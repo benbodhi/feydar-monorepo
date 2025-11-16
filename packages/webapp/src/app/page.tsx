@@ -10,6 +10,7 @@ import { TokenDeployment } from '@feydar/shared/types';
 import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { TokenPromo } from '@/components/TokenPromo';
 import Image from 'next/image';
 
 const PAGE_SIZE = 21;
@@ -177,6 +178,9 @@ export default function HomePage() {
           <ThemeToggle />
         </div>
       </div>
+
+      {/* Token Promo Section */}
+      <TokenPromo />
 
       {uniqueDeployments.length > 0 ? (
         <>

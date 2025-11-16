@@ -404,6 +404,29 @@ class DataIntegrityService {
                 }
             }
 
+            // Fetch changeable contract data
+            let contractData = {
+                currentAdmin: null,
+                currentImageUrl: null,
+                metadata: null,
+                context: null,
+                isVerified: null,
+            };
+            
+            try {
+                contractData = await this.feyContracts.fetchTokenContractData(tokenAddress);
+                
+                if (contractData.currentImageUrl) {
+                    logger.detail(`  ✓ Retrieved contract data: imageUrl, admin=${contractData.currentAdmin ? 'set' : 'null'}, verified=${contractData.isVerified}`);
+                } else if (contractData.currentAdmin || contractData.metadata || contractData.context !== null || contractData.isVerified !== null) {
+                    logger.detail(`  ✓ Retrieved contract data: admin=${contractData.currentAdmin ? 'set' : 'null'}, verified=${contractData.isVerified}`);
+                }
+            } catch (error) {
+                logger.warn(`  ⚠️  Could not query token contract for changeable data: ${error.message}`);
+            }
+            
+            const finalImageUrl = contractData.currentImageUrl || tokenImage || null;
+
             return {
                 tokenAddress,
                 // Truncate to fit database column limits (safety measure)
@@ -413,7 +436,12 @@ class DataIntegrityService {
                 deployerBasename: deployerBasename ? deployerBasename.substring(0, 255) : null,
                 deployerENS: deployerENS ? deployerENS.substring(0, 255) : null,
                 transactionHash: log.transactionHash,
-                tokenImage: tokenImage || null,
+                tokenImage: finalImageUrl,
+                currentAdmin: contractData.currentAdmin,
+                currentImageUrl: contractData.currentImageUrl,
+                metadata: contractData.metadata,
+                context: contractData.context,
+                isVerified: contractData.isVerified,
                 creatorBps,
                 feyStakersBps,
                 poolId: poolIdFormatted,
@@ -428,8 +456,7 @@ class DataIntegrityService {
     }
 
     /**
-     * Compare two values and determine if they're different
-     * Handles special cases for dates, nulls, and strings
+     * Compares two field values, handling dates, booleans, and nulls
      */
     compareFieldValue(oldVal, newVal, fieldKey) {
         // Special handling for Date objects
@@ -481,6 +508,13 @@ class DataIntegrityService {
             return false;
         }
         
+        // Special handling for boolean fields (isVerified)
+        if (fieldKey === 'isVerified') {
+            const oldBool = oldVal === null || oldVal === undefined ? null : Boolean(oldVal);
+            const newBool = newVal === null || newVal === undefined ? null : Boolean(newVal);
+            return oldBool !== newBool;
+        }
+        
         // Handle null/undefined comparison for other fields
         const oldValStr = oldVal === null || oldVal === undefined ? 'null' : String(oldVal);
         const newValStr = newVal === null || newVal === undefined ? 'null' : String(newVal);
@@ -507,6 +541,7 @@ class DataIntegrityService {
         }
         return String(value);
     }
+
 
     /**
      * Process a range of blocks and ensure data integrity
@@ -584,6 +619,11 @@ class DataIntegrityService {
                                 deployerENS: deployment.deployerENS || null,
                                 transactionHash: deployment.transactionHash,
                                 tokenImage: deployment.tokenImage || null,
+                                currentAdmin: deployment.currentAdmin || null,
+                                currentImageUrl: deployment.currentImageUrl || null,
+                                metadata: deployment.metadata || null,
+                                context: deployment.context || null,
+                                isVerified: deployment.isVerified !== null && deployment.isVerified !== undefined ? deployment.isVerified : null,
                                 creatorBps: deployment.creatorBps !== null && deployment.creatorBps !== undefined ? deployment.creatorBps : null,
                                 feyStakersBps: deployment.feyStakersBps !== null && deployment.feyStakersBps !== undefined ? deployment.feyStakersBps : null,
                                 poolId: deployment.poolId || null,
@@ -608,6 +648,11 @@ class DataIntegrityService {
                                         { key: 'deployerBasename', label: 'Deployer Basename' },
                                         { key: 'deployerENS', label: 'Deployer ENS' },
                                         { key: 'tokenImage', label: 'Token Image' },
+                                        { key: 'currentAdmin', label: 'Current Admin' },
+                                        { key: 'currentImageUrl', label: 'Current Image URL' },
+                                        { key: 'metadata', label: 'Metadata' },
+                                        { key: 'context', label: 'Context' },
+                                        { key: 'isVerified', label: 'Is Verified' },
                                         { key: 'creatorBps', label: 'Creator BPS' },
                                         { key: 'feyStakersBps', label: 'FEY Stakers BPS' },
                                         { key: 'poolId', label: 'Pool ID' },
@@ -642,6 +687,11 @@ class DataIntegrityService {
                                             deployerBasename: deploymentData.deployerBasename,
                                             deployerENS: deploymentData.deployerENS,
                                             tokenImage: deploymentData.tokenImage,
+                                            currentAdmin: deploymentData.currentAdmin,
+                                            currentImageUrl: deploymentData.currentImageUrl,
+                                            metadata: deploymentData.metadata,
+                                            context: deploymentData.context,
+                                            isVerified: deploymentData.isVerified,
                                             // Only update fee splits if we actually found them - if null, skip updating those fields
                                             ...(deploymentData.creatorBps !== null && deploymentData.creatorBps !== undefined 
                                                 ? { creatorBps: deploymentData.creatorBps } 
@@ -683,6 +733,11 @@ class DataIntegrityService {
                                         { key: 'deployerBasename', label: 'Deployer Basename' },
                                         { key: 'deployerENS', label: 'Deployer ENS' },
                                         { key: 'tokenImage', label: 'Token Image' },
+                                        { key: 'currentAdmin', label: 'Current Admin' },
+                                        { key: 'currentImageUrl', label: 'Current Image URL' },
+                                        { key: 'metadata', label: 'Metadata' },
+                                        { key: 'context', label: 'Context' },
+                                        { key: 'isVerified', label: 'Is Verified' },
                                         { key: 'creatorBps', label: 'Creator BPS' },
                                         { key: 'feyStakersBps', label: 'FEY Stakers BPS' },
                                         { key: 'poolId', label: 'Pool ID' },
@@ -717,6 +772,11 @@ class DataIntegrityService {
                                             deployerBasename: deploymentData.deployerBasename,
                                             deployerENS: deploymentData.deployerENS,
                                             tokenImage: deploymentData.tokenImage,
+                                            currentAdmin: deploymentData.currentAdmin,
+                                            currentImageUrl: deploymentData.currentImageUrl,
+                                            metadata: deploymentData.metadata,
+                                            context: deploymentData.context,
+                                            isVerified: deploymentData.isVerified,
                                             // Only update fee splits if we actually found them - if null, skip updating those fields
                                             ...(deploymentData.creatorBps !== null && deploymentData.creatorBps !== undefined 
                                                 ? { creatorBps: deploymentData.creatorBps } 
@@ -865,10 +925,16 @@ class DataIntegrityService {
             
             logger.detail(`Processing backwards from block ${processFromBlock} to ${processToBlock} (${totalBlocks} blocks total)`);
             
+            // Process TokenCreated events (backwards, as before)
+            // Token images are now queried directly from the contract (current state)
             while (currentBlock >= processToBlock) {
                 const fromBlock = Math.max(currentBlock - MAX_BLOCKS_PER_QUERY + 1, processToBlock);
                 const toBlock = currentBlock;
+                
+                // Process TokenCreated events (deployments)
+                // This will also query the contract directly for the current image URL
                 await this.processBlockRange(fromBlock, toBlock, existingAddresses);
+                
                 currentBlock = fromBlock - 1;
 
                 // Progress update

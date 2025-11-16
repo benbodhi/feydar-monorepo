@@ -36,7 +36,8 @@ async function handleTokenDeployment({
     blockNumber,
     provider,
     discord,
-    fullEventData
+    fullEventData,
+    feyContracts // FEYContractHelper instance for fetching contract data
 }) {
     const startTime = Date.now();
 
@@ -202,6 +203,31 @@ async function handleTokenDeployment({
                 logger.detail('✅ Broadcasted via API');
             } catch (wsError) {
                 logger.warn(`Broadcast error: ${wsError.message}`);
+            }
+
+            // Fetch contract data asynchronously after initial save
+            if (feyContracts) {
+                feyContracts.fetchTokenContractData(tokenAddress)
+                    .then(async (contractData) => {
+                        try {
+                            await prisma.deployment.update({
+                                where: { tokenAddress },
+                                data: {
+                                    currentAdmin: contractData.currentAdmin,
+                                    currentImageUrl: contractData.currentImageUrl,
+                                    metadata: contractData.metadata,
+                                    context: contractData.context,
+                                    isVerified: contractData.isVerified,
+                                },
+                            });
+                            logger.detail(`✅ Updated contract data for ${tokenAddress}`);
+                        } catch (updateError) {
+                            logger.warn(`Failed to update contract data for ${tokenAddress}: ${updateError.message}`);
+                        }
+                    })
+                    .catch((error) => {
+                        logger.warn(`Background contract data fetch failed for ${tokenAddress}: ${error.message}`);
+                    });
             }
         } catch (dbError) {
             logger.error(`Database save error: ${dbError.message}`);

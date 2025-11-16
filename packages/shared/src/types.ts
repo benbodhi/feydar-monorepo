@@ -7,13 +7,18 @@ export interface TokenDeployment {
   name: string;
   symbol: string;
   deployer: string;
-  deployerBasename?: string;  // Base name (e.g., "benbodhi" from "benbodhi.base.eth")
-  deployerENS?: string;        // ENS name (e.g., "benbodhi.eth")
+  deployerBasename?: string;
+  deployerENS?: string;
   transactionHash: string;
   tokenImage?: string;
-  creatorBps?: number;      // Creator fee in basis points (from TokenRewardAdded event)
-  feyStakersBps?: number;    // FEY Stakers fee in basis points (from TokenRewardAdded event)
-  poolId?: string;           // Uniswap V4 pool ID (bytes32 as hex)
+  currentAdmin?: string;
+  currentImageUrl?: string;
+  metadata?: string;
+  context?: string;
+  isVerified?: boolean;
+  creatorBps?: number;
+  feyStakersBps?: number;
+  poolId?: string;
   blockNumber: number;
   createdAt: Date;
 }

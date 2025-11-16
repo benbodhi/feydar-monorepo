@@ -27,6 +27,12 @@ model Deployment {
   poolId          String?   @db.VarChar(66)  // Uniswap V3 pool ID (bytes32 as hex)
   blockNumber     BigInt
   createdAt       DateTime  // Must always be set to block timestamp, never use default
+  
+  currentAdmin    String?   @db.VarChar(42)
+  currentImageUrl String?   @db.Text
+  metadata        String?   @db.Text
+  context         String?   @db.Text
+  isVerified      Boolean?
 
   @@index([createdAt(sort: Desc)])
   @@index([tokenAddress])

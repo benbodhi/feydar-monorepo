@@ -177,17 +177,29 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
-            {deployment.tokenImage && (
-              <div className="mt-2 relative w-full aspect-square rounded-lg overflow-hidden">
+            <div className="mt-2 relative w-full aspect-square rounded-lg overflow-hidden bg-black">
+              {deployment.currentImageUrl || deployment.tokenImage ? (
                 <Image
-                  src={formatIPFSUrl(deployment.tokenImage)}
+                  src={formatIPFSUrl(deployment.currentImageUrl || deployment.tokenImage || '')}
                   alt={deployment.name}
                   fill
                   className="object-cover"
                   unoptimized
                 />
-              </div>
-            )}
+              ) : (
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  <Image
+                    src="/fey-logo.svg"
+                    alt="FEY Logo"
+                    width={120}
+                    height={120}
+                    className="opacity-80"
+                    unoptimized
+                  />
+                  <p className="text-[10px] text-white/60 mt-2">no token image</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardHeader>

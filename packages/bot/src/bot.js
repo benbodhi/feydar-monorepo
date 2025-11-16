@@ -626,6 +626,7 @@ class FeydarBot {
                         blockNumber: log.blockNumber,
                         provider: this.provider,
                         discord: this.discord,
+                        feyContracts: this.feyContracts, // Pass contract helper for async contract data fetching
                         // Pass all additional data for potential use
                         fullEventData: {
                             msgSender,
