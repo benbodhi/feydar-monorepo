@@ -14,6 +14,11 @@ const router = Router();
  * Handles: miniapp_added, miniapp_removed, notifications_enabled, notifications_disabled
  */
 router.post('/', async (req, res) => {
+  // Log incoming request for debugging
+  console.log('[Webhook] Received POST request');
+  console.log('[Webhook] Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('[Webhook] Body:', JSON.stringify(req.body, null, 2));
+  
   try {
     // Parse and verify the webhook event
     const data = await parseWebhookEvent(req.body, verifyAppKeyWithNeynar);
@@ -27,6 +32,7 @@ router.post('/', async (req, res) => {
     // Handle different event types
     if (eventType === 'miniapp_added' || (event as any).event === 'miniapp_added') {
       const miniappEvent = event as { event: 'miniapp_added'; notificationDetails?: { url: string; token: string; } };
+      console.log(`[Webhook] miniapp_added event - notificationDetails:`, miniappEvent.notificationDetails ? 'present' : 'missing');
       // User added the miniapp - store notification details if available
       if (miniappEvent.notificationDetails) {
           await prisma.notificationSubscription.upsert({
@@ -52,6 +58,8 @@ router.post('/', async (req, res) => {
             },
           });
           console.log(`[Webhook] Stored notification subscription for FID: ${fid}`);
+        } else {
+          console.warn(`[Webhook] miniapp_added event received but notificationDetails are missing - subscription not created for FID: ${fid}`);
         }
     } else if (eventType === 'miniapp_removed' || (event as any).event === 'miniapp_removed') {
       // User removed the miniapp - disable all their subscriptions
@@ -62,6 +70,7 @@ router.post('/', async (req, res) => {
       console.log(`[Webhook] Disabled notifications for FID: ${fid}`);
     } else if (eventType === 'notifications_enabled' || (event as any).event === 'notifications_enabled') {
       const notificationsEvent = event as { event: 'notifications_enabled'; notificationDetails: { url: string; token: string; } };
+      console.log(`[Webhook] notifications_enabled event - notificationDetails:`, notificationsEvent.notificationDetails ? 'present' : 'missing');
       // User enabled notifications - store/update token
       if (notificationsEvent.notificationDetails) {
         await prisma.notificationSubscription.upsert({
@@ -87,6 +96,8 @@ router.post('/', async (req, res) => {
           },
         });
         console.log(`[Webhook] Enabled notifications for FID: ${fid}`);
+      } else {
+        console.warn(`[Webhook] notifications_enabled event received but notificationDetails are missing - subscription not created for FID: ${fid}`);
       }
     } else if (eventType === 'notifications_disabled' || (event as any).event === 'notifications_disabled') {
       const notificationsEvent = event as { event: 'notifications_disabled'; notificationDetails?: { url: string; token: string; } };

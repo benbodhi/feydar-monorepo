@@ -96,3 +96,35 @@ export async function getAdjacentTokens(
   }
 }
 
+/**
+ * Send notifications for a token deployment
+ * This calls the API endpoint that sends push notifications to all subscribed users
+ * 
+ * @param deployment - The token deployment data
+ * @returns Promise with the number of notifications sent and failed
+ */
+export async function sendDeploymentNotifications(
+  deployment: TokenDeployment
+): Promise<{ success: boolean; sent: number; failed: number }> {
+  try {
+    const response = await fetch(`${API_URL}/api/notifications/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(deployment),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[sendDeploymentNotifications] API Error (${response.status}):`, errorText);
+      throw new Error(`Failed to send notifications: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    console.error('[sendDeploymentNotifications] Error:', error);
+    throw error;
+  }
+}
+
