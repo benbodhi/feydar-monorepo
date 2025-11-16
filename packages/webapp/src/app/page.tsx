@@ -124,11 +124,36 @@ export default function HomePage() {
     };
   }, [queryClient]);
 
+  // Header component to reuse across loading, error, and loaded states
+  const Header = () => (
+    <div ref={topRef} className="mb-8">
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div className="flex items-center gap-4">
+          <Image
+            src="/feydar-logo.png"
+            alt="FEYDAR Logo"
+            width={48}
+            height={48}
+            className="flex-shrink-0"
+            unoptimized
+          />
+          <div>
+            <h1 className="text-3xl font-bold mb-1">FEYDAR</h1>
+            <p className="text-sm text-muted-foreground">
+              Monitoring FEY Protocol token deployments on Base in real-time
+            </p>
+          </div>
+        </div>
+        <ThemeToggle />
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">FEY Token Deployments</h1>
-        <p>Loading deployments...</p>
+        <Header />
+        <p className="text-muted-foreground">Loading deployments...</p>
       </div>
     );
   }
@@ -137,7 +162,7 @@ export default function HomePage() {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">FEY Token Deployments</h1>
+        <Header />
         <div className="space-y-2">
           <p className="text-destructive font-semibold">Error loading deployments</p>
           <p className="text-sm text-muted-foreground">{errorMessage}</p>
@@ -157,27 +182,7 @@ export default function HomePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div ref={topRef} className="mb-8">
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/feydar-logo.png"
-              alt="FEYDAR Logo"
-              width={48}
-              height={48}
-              className="flex-shrink-0"
-              unoptimized
-            />
-            <div>
-              <h1 className="text-3xl font-bold mb-1">FEYDAR</h1>
-              <p className="text-sm text-muted-foreground">
-                Monitoring FEY Protocol token deployments on Base in real-time
-              </p>
-            </div>
-          </div>
-          <ThemeToggle />
-        </div>
-      </div>
+      <Header />
 
       {/* Token Promo Section */}
       <TokenPromo />
