@@ -11,7 +11,7 @@
     "homeUrl": "https://feydar.app",
     "imageUrl": "https://feydar.app/feydar-fc-miniapp-cover.png",
     "buttonTitle": "Open Feydar",
-    "splashImageUrl": "https://feydar.app/feydar-logo.png",
+    "splashImageUrl": "https://feydar.app/feydar-farcaster-miniapp-splash.png",
     "splashBackgroundColor": "#000000"
   }
 }
