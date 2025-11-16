@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "deployments" 
+ADD COLUMN IF NOT EXISTS "currentAdmin" VARCHAR(42),
+ADD COLUMN IF NOT EXISTS "currentImageUrl" TEXT,
+ADD COLUMN IF NOT EXISTS "metadata" TEXT,
+ADD COLUMN IF NOT EXISTS "context" TEXT,
+ADD COLUMN IF NOT EXISTS "isVerified" BOOLEAN;
+

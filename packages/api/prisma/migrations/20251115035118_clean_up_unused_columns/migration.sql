@@ -1,0 +1,1 @@
+-- This migration was applied but the file was deleted. It added deployerName which already existed.

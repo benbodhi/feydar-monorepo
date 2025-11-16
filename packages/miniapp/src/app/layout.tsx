@@ -34,22 +34,22 @@ const frame = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: 'Feydar - FEY Protocol Token Deployments',
-  description: 'Monitor FEY Protocol token deployments on Base in real-time',
+  title: 'FEYDAR - Catch new FEY tokens',
+  description: 'Real-time FEY token launches! To ape or not to ape, that is the question.',
   icons: {
     icon: '/feydar-logo.png',
     shortcut: '/feydar-logo.png',
     apple: '/feydar-logo.png',
   },
   openGraph: {
-    title: 'Feydar - FEY Protocol Token Deployments',
-    description: 'Monitor FEY Protocol token deployments on Base in real-time',
+    title: 'FEYDAR - Catch new FEY tokens',
+    description: 'Real-time FEY token launches! To ape or not to ape, that is the question.',
     images: ['/feydar-farcaster-miniapp-cover.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Feydar - FEY Protocol Token Deployments',
-    description: 'Monitor FEY Protocol token deployments on Base in real-time',
+    title: 'FEYDAR - Catch new FEY tokens',
+    description: 'Real-time FEY token launches! To ape or not to ape, that is the question.',
     images: ['/feydar-farcaster-miniapp-cover.png'],
   },
   other: {
