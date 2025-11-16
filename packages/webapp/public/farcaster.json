@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header": "",
-    "payload": "",
-    "signature": ""
+    "header": "eyJmaWQiOjgwMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDQ3YzQ0NmQ2Njk3NUUyN2MyMTA5OTNEQTI5YmQ3ZmRlMDkyNUE4OUEifQ",
+    "payload": "eyJkb21haW4iOiJmZXlkYXIuYXBwIn0",
+    "signature": "pFJiA89IwJSVbILBbA/pkzzPlExh7NBJixwJOZRRaj5RAmiiW9JMHSR8xdW+Z8KPETGKA9tEhWjqysSKRMbfxRw="
   },
   "frame": {
     "version": "1",
@@ -12,6 +12,7 @@
     "imageUrl": "https://feydar.app/feydar-fc-miniapp-cover.png",
     "buttonTitle": "Open Feydar",
     "splashImageUrl": "https://feydar.app/feydar-farcaster-miniapp-splash.png",
-    "splashBackgroundColor": "#000000"
+    "splashBackgroundColor": "#000000",
+    "webhookUrl": "https://feydar.app/api/webhook"
   }
 }
