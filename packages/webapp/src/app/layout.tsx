@@ -5,7 +5,16 @@ import { Providers } from './providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app';
+// Ensure URL has protocol
+function ensureProtocol(url: string): string {
+  if (!url) return 'https://feydar.app';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+}
+
+const APP_URL = ensureProtocol(process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app');
 
 // Farcaster miniapp embed metadata for sharing and discovery
 // This enables the app to be shared and discovered in Farcaster clients

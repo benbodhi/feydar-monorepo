@@ -609,12 +609,16 @@ class DataIntegrityService {
                         for (const deployment of deployments) {
                             const existingByTx = existingByTxHash.get(deployment.transactionHash.toLowerCase());
                             
+                            // Normalize addresses to lowercase for consistent database storage
+                            const normalizedTokenAddress = deployment.tokenAddress.toLowerCase();
+                            const normalizedDeployer = deployment.deployer.toLowerCase();
+                            
                             // Build full deployment data
                             const deploymentData = {
-                                tokenAddress: deployment.tokenAddress,
+                                tokenAddress: normalizedTokenAddress,
                                 name: deployment.name,
                                 symbol: deployment.symbol,
-                                deployer: deployment.deployer,
+                                deployer: normalizedDeployer,
                                 deployerBasename: deployment.deployerBasename || null,
                                 deployerENS: deployment.deployerENS || null,
                                 transactionHash: deployment.transactionHash,
@@ -673,7 +677,7 @@ class DataIntegrityService {
                                     }
                                     
                                     if (changes.length > 0) {
-                                        logger.detail(`  🔄 Updating ${deployment.tokenAddress}:`);
+                                        logger.detail(`  🔄 Updating ${normalizedTokenAddress}:`);
                                         changes.forEach(change => {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
@@ -709,9 +713,9 @@ class DataIntegrityService {
                                                 data: updateData,
                                             })
                                         );
-                                        updatedTokens.push(deployment.tokenAddress);
+                                        updatedTokens.push(normalizedTokenAddress);
                                     } else {
-                                        logger.detail(`  ✓ ${deployment.tokenAddress}: Data already accurate (no changes needed)`);
+                                        logger.detail(`  ✓ ${normalizedTokenAddress}: Data already accurate (no changes needed)`);
                                     }
                                 } else {
                                     // Shouldn't happen, but handle it
@@ -720,7 +724,7 @@ class DataIntegrityService {
                             } else {
                                 // No record exists by transactionHash - check by tokenAddress
                                 const existingByAddress = await prisma.deployment.findUnique({
-                                    where: { tokenAddress: deployment.tokenAddress },
+                                    where: { tokenAddress: normalizedTokenAddress },
                                 });
                                 
                                 if (existingByAddress) {
@@ -758,7 +762,7 @@ class DataIntegrityService {
                                     }
                                     
                                     if (changes.length > 0) {
-                                        logger.detail(`  🔄 Updating ${deployment.tokenAddress}:`);
+                                        logger.detail(`  🔄 Updating ${normalizedTokenAddress}:`);
                                         changes.forEach(change => {
                                             logger.detail(`     ${change.field}: "${change.old}" → "${change.new}"`);
                                         });
@@ -790,16 +794,16 @@ class DataIntegrityService {
                                         
                                         operations.push(
                                             prisma.deployment.update({
-                                                where: { tokenAddress: deployment.tokenAddress },
+                                                where: { tokenAddress: normalizedTokenAddress },
                                                 data: updateData,
                                             })
                                         );
-                                        updatedTokens.push(deployment.tokenAddress);
+                                        updatedTokens.push(normalizedTokenAddress);
                                     } else {
-                                        logger.detail(`  ✓ ${deployment.tokenAddress}: Data already accurate (no changes needed)`);
+                                        logger.detail(`  ✓ ${normalizedTokenAddress}: Data already accurate (no changes needed)`);
                                     }
                                 } else {
-                                    logger.detail(`  ➕ Adding new token: ${deployment.tokenAddress} (${deployment.name || 'N/A'})`);
+                                    logger.detail(`  ➕ Adding new token: ${normalizedTokenAddress} (${deployment.name || 'N/A'})`);
                                     operations.push(
                                         prisma.deployment.create({
                                             data: deploymentData,

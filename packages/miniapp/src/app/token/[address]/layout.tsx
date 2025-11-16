@@ -1,8 +1,17 @@
 import { Metadata } from 'next';
 import { formatIPFSUrl } from '@feydar/shared/utils';
 
+// Ensure URL has protocol
+function ensureProtocol(url: string): string {
+  if (!url) return 'https://feydar.app';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `https://${url}`;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app';
+const APP_URL = ensureProtocol(process.env.NEXT_PUBLIC_APP_URL || 'https://feydar.app');
 
 async function getDeployment(address: string) {
   try {

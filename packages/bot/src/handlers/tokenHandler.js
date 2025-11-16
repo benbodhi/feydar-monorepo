@@ -60,6 +60,11 @@ async function handleTokenDeployment({
 }) {
     const startTime = Date.now();
 
+    // Normalize addresses to lowercase for consistent database storage
+    // (Ethereum addresses are case-insensitive, but we store them lowercase)
+    tokenAddress = tokenAddress.toLowerCase();
+    deployer = deployer.toLowerCase();
+
     try {
         logger.section('📝 Processing Token Deployment');
         logger.detail('Token', `${name} (${symbol})`);

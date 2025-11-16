@@ -220,13 +220,24 @@ The miniapp uses Wagmi for wallet interactions:
 
 ### Railway
 
-1. Create a new Railway service for the miniapp
-2. Connect your GitHub repository
-3. Set build command: `pnpm --filter miniapp build`
-4. Set start command: `pnpm --filter miniapp start`
-5. Configure environment variables:
+1. In your Railway project, click **"+ New"** → **"GitHub Repo"**
+2. Select the **same repository** as the other services
+3. After the service is created, go to the **Settings** tab
+4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
+5. Go to **"Variables"** tab and add:
+   - `NODE_VERSION=20` (Next.js 16 requires Node.js >=20.9.0)
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+   ```bash
+   pnpm --filter shared build && pnpm --filter miniapp build
+   ```
+   - Railway will auto-run `pnpm install` from root first, then this builds shared and miniapp packages
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+   ```bash
+   cd packages/miniapp && pnpm start
+   ```
+8. Go to **"Variables"** tab and add environment variables:
    - `NEXT_PUBLIC_API_URL`: Your API server URL
-   - `NEXT_PUBLIC_WS_URL`: Your WebSocket URL
+   - `NEXT_PUBLIC_WS_URL`: Your WebSocket URL (use `wss://` for production)
    - `NEXT_PUBLIC_APP_URL`: Your miniapp URL (e.g., `https://miniapp.feydar.app`)
 
 ### Environment Variables for Production
