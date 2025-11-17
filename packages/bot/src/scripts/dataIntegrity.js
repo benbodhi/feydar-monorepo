@@ -1,6 +1,10 @@
 // Load environment variables first
 require('dotenv').config();
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const NO_LIMIT_MODE = args.includes('--no-limit') || args.includes('--nolimit');
+
 // Validate required environment variables
 if (!process.env.ALCHEMY_API_KEY || !process.env.FEY_FACTORY_ADDRESS || !process.env.DATABASE_URL) {
     console.error('Missing required environment variables: ALCHEMY_API_KEY, FEY_FACTORY_ADDRESS, or DATABASE_URL');
@@ -15,16 +19,35 @@ const { resolveAddressName } = require('../services/nameResolver');
 
 // Configuration
 const BATCH_SIZE = 1000; // Process events in batches
-// Alchemy free tier allows max 10 blocks per eth_getLogs request
-// Set to 9 to be safe and leave room for retries
-const MAX_BLOCKS_PER_QUERY = process.env.MAX_BLOCKS_PER_QUERY 
-    ? parseInt(process.env.MAX_BLOCKS_PER_QUERY) 
-    : 9; // Default to 9 for free tier compatibility
-const REQUEST_DELAY_MS = process.env.REQUEST_DELAY_MS 
-    ? parseInt(process.env.REQUEST_DELAY_MS) 
-    : 100; // Delay between requests in milliseconds
+
+// Rate limiting configuration
+// When --no-limit flag is used, bypass rate limits for faster execution
+let MAX_BLOCKS_PER_QUERY, REQUEST_DELAY_MS, RETRY_DELAY_BASE_MS;
+
+if (NO_LIMIT_MODE) {
+    // No-limit mode: run as fast as possible (use with caution - may hit rate limits)
+    MAX_BLOCKS_PER_QUERY = process.env.MAX_BLOCKS_PER_QUERY 
+        ? parseInt(process.env.MAX_BLOCKS_PER_QUERY) 
+        : 1000; // Much larger block range per query
+    REQUEST_DELAY_MS = process.env.REQUEST_DELAY_MS 
+        ? parseInt(process.env.REQUEST_DELAY_MS) 
+        : 0; // No delay between requests
+    RETRY_DELAY_BASE_MS = 100; // Minimal retry delay
+    console.warn('⚠️  NO-LIMIT MODE ENABLED: Running without rate limits. This may consume Compute Units quickly!');
+} else {
+    // Default mode: respect rate limits
+    // Alchemy free tier allows max 10 blocks per eth_getLogs request
+    // Set to 9 to be safe and leave room for retries
+    MAX_BLOCKS_PER_QUERY = process.env.MAX_BLOCKS_PER_QUERY 
+        ? parseInt(process.env.MAX_BLOCKS_PER_QUERY) 
+        : 9; // Default to 9 for free tier compatibility
+    REQUEST_DELAY_MS = process.env.REQUEST_DELAY_MS 
+        ? parseInt(process.env.REQUEST_DELAY_MS) 
+        : 100; // Delay between requests in milliseconds
+    RETRY_DELAY_BASE_MS = 1000; // Base delay for exponential backoff (1 second)
+}
+
 const MAX_RETRIES = 5; // Maximum retries for rate limit errors
-const RETRY_DELAY_BASE_MS = 1000; // Base delay for exponential backoff (1 second)
 
 /**
  * Data Integrity Service
@@ -37,6 +60,10 @@ const RETRY_DELAY_BASE_MS = 1000; // Base delay for exponential backoff (1 secon
  * - Adds missing tokens
  * - Updates existing tokens with accurate data (timestamps, names, fee splits, etc.)
  * - Safe to run multiple times (idempotent)
+ * 
+ * Usage:
+ *   node dataIntegrity.js              # Run with rate limits (default, safe)
+ *   node dataIntegrity.js --no-limit   # Run without rate limits (faster, uses more Compute Units)
  * 
  * This script is designed to be run:
  * - Manually when needed
@@ -860,13 +887,20 @@ class DataIntegrityService {
             // Handle rate limit errors with exponential backoff retry
             if (isRateLimitError && retryCount < MAX_RETRIES) {
                 const retryDelay = RETRY_DELAY_BASE_MS * Math.pow(2, retryCount); // Exponential backoff
-                logger.warn(`Rate limit error (429) for blocks ${fromBlock}-${toBlock}. Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                if (NO_LIMIT_MODE) {
+                    logger.warn(`Rate limit error (429) in no-limit mode for blocks ${fromBlock}-${toBlock}. Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                    logger.warn('⚠️  Consider running without --no-limit flag if rate limits persist');
+                } else {
+                    logger.warn(`Rate limit error (429) for blocks ${fromBlock}-${toBlock}. Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                }
                 await new Promise(resolve => setTimeout(resolve, retryDelay));
                 return await this.processBlockRange(fromBlock, toBlock, existingAddresses, retryCount + 1);
             }
             
             // Handle block range errors by splitting
-            if (isBlockRangeError && (toBlock - fromBlock) > 10) {
+            // In no-limit mode, allow larger ranges (up to MAX_BLOCKS_PER_QUERY)
+            const maxBlockRange = NO_LIMIT_MODE ? MAX_BLOCKS_PER_QUERY : 10;
+            if (isBlockRangeError && (toBlock - fromBlock) > maxBlockRange) {
                 // Split the range in half and retry
                 logger.warn(`Block range too large (${toBlock - fromBlock + 1} blocks), splitting...`);
                 const midBlock = Math.floor((fromBlock + toBlock) / 2);
