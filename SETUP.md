@@ -129,6 +129,20 @@ cd packages/webapp && pnpm start
 
 **Important:** For monorepos with pnpm workspaces, **do NOT set a Root Directory**. Railway needs to see the root `package.json` to detect `pnpm`. We'll handle package-specific builds using pnpm filters from the repo root.
 
+**💡 Pro Tip: Configure Watch Paths to Avoid Unnecessary Deployments**
+
+To prevent Railway from redeploying all services when you push changes, configure **Watch Paths** for each service. This ensures only services with actual changes get redeployed:
+
+1. Go to each service's **Settings** tab
+2. Find the **"Source"** or **"Watch Paths"** section
+3. Add the paths that should trigger deployments (paths are relative to repo root, no leading slash):
+   - **Bot Service:** `packages/bot/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - **API Service:** `packages/api/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - **Webapp Service:** `packages/webapp/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - **Miniapp Service:** `packages/miniapp/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+
+This way, when you push changes to `packages/bot/`, only the bot service redeploys, not all services!
+
 ### 1. Database Setup
 
 Create a PostgreSQL service on Railway.
@@ -145,16 +159,20 @@ For services in the same Railway project, always use **Private Network**.
 2. Select your repository (you'll use the same repo for all services)
 3. After the service is created, go to the **Settings** tab
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
-5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+5. **Configure Watch Paths** (optional but recommended):
+   - In **Settings** → **"Source"** or **"Watch Paths"** section
+   - Add: `packages/bot/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - This ensures only bot-related changes trigger deployments
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
    ```bash
    pnpm --filter shared build && cd packages/api && pnpm prisma:generate && cd ../..
    ```
    - The bot depends on `@feydar/shared` and `@prisma/client`, so we need to build shared and generate Prisma Client. Railway will auto-run `pnpm install` from the root.
-6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/bot && node src/bot.js
    ```
-7. Go to **"Variables"** tab and add environment variables:
+8. Go to **"Variables"** tab and add environment variables:
    - `DISCORD_TOKEN`
    - `DISCORD_CHANNEL_ID`
    - `ALCHEMY_API_KEY`
@@ -171,16 +189,20 @@ For services in the same Railway project, always use **Private Network**.
 2. Select the **same repository** as the Bot service
 3. After the service is created, go to the **Settings** tab
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
-5. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+5. **Configure Watch Paths** (optional but recommended):
+   - In **Settings** → **"Source"** or **"Watch Paths"** section
+   - Add: `packages/api/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - This ensures only API-related changes trigger deployments
+6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
    ```bash
    pnpm --filter shared build && cd packages/api && pnpm prisma:generate && cd ../.. && pnpm --filter api build
    ```
    - Railway will auto-run `pnpm install` from root first, then this builds shared, generates Prisma client, and builds API
-6. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/api && pnpm start
    ```
-7. Go to **"Variables"** tab and add environment variables:
+8. Go to **"Variables"** tab and add environment variables:
    
    **Required:**
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
@@ -201,7 +223,7 @@ For services in the same Railway project, always use **Private Network**.
    
    **Note:** Railway will automatically detect and suggest these variables from your source code. You can use the "Suggested Variables" feature to add them quickly.
 
-8. **Generate Public Domain** (required for webapp, optional for bot):
+9. **Generate Public Domain** (required for webapp, optional for bot):
    - Go to your **API service** main page (click the service name)
    - Click on **"Networking"** tab (or click "Unexposed" if shown on the service card)
    - Under **"Public Networking"** section, click **"Generate Domain"**
@@ -215,18 +237,22 @@ For services in the same Railway project, always use **Private Network**.
 2. Select the **same repository** as the other services
 3. After the service is created, go to the **Settings** tab
 4. **Do NOT set a Root Directory** - leave it empty so Railway can see the root `package.json` and detect `pnpm`
-5. Go to **"Variables"** tab and add:
+5. **Configure Watch Paths** (optional but recommended):
+   - In **Settings** → **"Source"** or **"Watch Paths"** section
+   - Add: `packages/webapp/**`, `packages/shared/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+   - This ensures only webapp-related changes trigger deployments
+6. Go to **"Variables"** tab and add:
    - `NODE_VERSION=20` (Next.js 16 requires Node.js >=20.9.0)
-6. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
+7. Go to **"Build"** section (or **"Settings"** → **"Build"**), click **"+ Build Command"** and set it to:
    ```bash
    pnpm --filter shared build && pnpm --filter webapp build
    ```
    - Railway will auto-run `pnpm install` from root first, then this builds shared and webapp packages
-7. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
+8. Go to **"Deploy"** section (or **"Settings"** → **"Deploy"**), set **"Start Command"** to:
    ```bash
    cd packages/webapp && pnpm start
    ```
-8. **Generate Public Domain for API** (required for webapp):
+9. **Generate Public Domain for API** (required for webapp):
    - Go to your **API service** in Railway
    - Click on the service name
    - Go to the **"Networking"** tab (or click "Unexposed" if shown)
@@ -235,7 +261,7 @@ For services in the same Railway project, always use **Private Network**.
    - Copy this URL - you'll need it for the webapp
    - **Note:** The webapp **must** use the public URL because it runs in users' browsers, which are outside Railway's private network
 
-9. Go to **"Variables"** tab and add environment variables:
+10. Go to **"Variables"** tab and add environment variables:
    - `NEXT_PUBLIC_API_URL` - Use the public URL you just generated (e.g., `https://your-api-service-production.up.railway.app`)
    - `NEXT_PUBLIC_WS_URL` - Use the same URL but with `wss://` protocol (e.g., `wss://your-api-service-production.up.railway.app`)
      - **Note:** Railway uses HTTPS, so always use `wss://` (secure WebSocket) for WebSocket connections

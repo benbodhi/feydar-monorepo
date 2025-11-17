@@ -106,6 +106,14 @@ class FeydarBot {
                 );
                 providerCreated = true;
                 
+                // Wait a moment for websocket to be initialized (it may not be available immediately)
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Track connection state to detect premature closures
+                let connectionClosed = false;
+                let closeCode = null;
+                let closeReason = null;
+                
                 // Set up error handler for WebSocket connection errors
                 if (this.provider.websocket) {
                     this.provider.websocket.on('error', (error) => {
@@ -113,12 +121,79 @@ class FeydarBot {
                         if (errorMessage.includes('429') || errorMessage.includes('Unexpected server response: 429')) {
                             logger.error('Rate limit error (429) from Alchemy. This may indicate multiple instances running or too many connection attempts.');
                             logger.warn('Waiting before retry...');
+                        } else {
+                            logger.error(`WebSocket error: ${errorMessage}`);
                         }
                     });
+                    
+                    // Log connection state changes
+                    this.provider.websocket.on('open', () => {
+                        logger.detail('WebSocket connection opened');
+                    });
+                    
+                    this.provider.websocket.on('close', (code, reason) => {
+                        connectionClosed = true;
+                        closeCode = code;
+                        closeReason = reason;
+                        logger.warn(`WebSocket connection closed: code=${code}, reason=${reason || 'none'}`);
+                        
+                        // If closed with 429 or abnormal closure right after connection, this is a rate limit issue
+                        if (code === 1006 || code === 429) {
+                            logger.error('WebSocket closed immediately after connection - likely rate limited');
+                        }
+                    });
+                } else {
+                    logger.warn('WebSocket not available immediately, will wait for provider.ready...');
                 }
                 
-                await this.provider.ready;
+                // Add timeout to provider.ready to prevent hanging
+                const CONNECTION_TIMEOUT = 30000; // 30 seconds
+                logger.detail(`Waiting for provider connection (timeout: ${CONNECTION_TIMEOUT/1000}s)...`);
+                
+                const readyPromise = this.provider.ready;
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error(`Provider connection timeout after ${CONNECTION_TIMEOUT/1000} seconds. The WebSocket may not be establishing properly.`));
+                    }, CONNECTION_TIMEOUT);
+                });
+                
+                await Promise.race([readyPromise, timeoutPromise]);
                 logger.detail('✅ Provider Connected');
+                
+                // Verify connection is stable - wait a moment and check if it's still open
+                logger.detail('Verifying WebSocket connection stability...');
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+                
+                // Check if WebSocket closed immediately after connection (rate limit issue)
+                if (connectionClosed) {
+                    const errorMsg = `WebSocket closed immediately after connection (code: ${closeCode}). This indicates a rate limit (429) or connection rejection from Alchemy.`;
+                    logger.error(errorMsg);
+                    
+                    // Clean up
+                    if (this.provider) {
+                        try {
+                            if (this.provider.websocket) {
+                                this.provider.websocket.removeAllListeners();
+                                this.provider.websocket.terminate();
+                            }
+                            await this.provider.destroy();
+                        } catch (cleanupError) {
+                            // Ignore cleanup errors
+                        }
+                        this.provider = null;
+                    }
+                    
+                    throw new Error('RATE_LIMIT_429');
+                }
+                
+                // Verify WebSocket is still open
+                if (this.provider.websocket && this.provider.websocket.readyState !== 1) {
+                    const state = this.provider.websocket.readyState;
+                    const states = { 0: 'CONNECTING', 1: 'OPEN', 2: 'CLOSING', 3: 'CLOSED' };
+                    throw new Error(`WebSocket not in OPEN state after connection. State: ${states[state] || state}`);
+                }
+                
+                logger.detail('✅ WebSocket connection verified and stable');
             } catch (connectionError) {
                 const errorMessage = connectionError.message || connectionError.toString();
                 const isRateLimit = errorMessage.includes('429') || 
@@ -783,10 +858,12 @@ class FeydarBot {
                 }
 
                 // Check if we've received events recently
+                // Note: Removed getBlockNumber() call - WebSocket connection check is sufficient
+                // and calling getBlockNumber() consumes Compute Units unnecessarily
                 const timeSinceLastEvent = Date.now() - this.lastEventTime;
-                if (timeSinceLastEvent > 5 * 60 * 1000) { // 5 minutes
-                    logger.warn('No events received recently, checking connection...');
-                    await this.provider.getBlockNumber();
+                if (timeSinceLastEvent > 10 * 60 * 1000) { // 10 minutes (increased from 5)
+                    logger.warn('No events received recently, but WebSocket connection is active');
+                    // Don't call getBlockNumber() - it costs Compute Units and WebSocket check is enough
                 }
 
             } catch (error) {

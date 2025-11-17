@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ethers } from 'ethers';
 import { prisma } from '../db/client';
 import { getPriceData, subscribeToPoolSwaps } from '../services/priceCache';
+import { getSharedProvider } from '../services/provider';
 
 const router = Router();
 
@@ -138,9 +139,8 @@ router.get('/:tokenAddress', async (req, res) => {
 
     if (deployment?.poolId && process.env.ALCHEMY_API_KEY) {
       try {
-        const provider = new ethers.JsonRpcProvider(
-          `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
-        );
+        // Use shared provider to avoid creating new connections (saves Compute Units)
+        const provider = getSharedProvider();
 
         const poolManagerAddress = process.env.UNISWAP_V4_POOL_MANAGER || '0x498581ff718922c3f8e6a244956af099b2652b2b';
         await subscribeToPoolSwaps(

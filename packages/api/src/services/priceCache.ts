@@ -27,8 +27,8 @@ const priceCache = new Map<string, CachedPriceData>();
 const activeSubscriptions = new Map<string, ethers.Contract>();
 
 const CACHE_TTL = {
-  price: 30 * 1000,      // 30 seconds
-  liquidity: 30 * 1000,  // 30 seconds
+  price: 60 * 1000,      // 60 seconds (increased from 30s to reduce CU usage)
+  liquidity: 60 * 1000,  // 60 seconds (increased from 30s to reduce CU usage)
   volume: 5 * 60 * 1000, // 5 minutes
 };
 
