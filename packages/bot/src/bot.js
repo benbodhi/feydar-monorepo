@@ -41,15 +41,48 @@ class FeydarBot {
         });
 
         process.on('uncaughtException', async (error) => {
-            logger.error(`Uncaught Exception: ${error.message}`);
-            console.error(error);
-            await this.cleanup(true);
+            const errorMessage = error.message || error.toString();
+            const isRateLimit = errorMessage.includes('429') || 
+                               errorMessage.includes('Unexpected server response: 429');
+            
+            logger.error(`Uncaught Exception: ${errorMessage}`);
+            
+            if (isRateLimit) {
+                logger.warn('Rate limit error (429) detected. Attempting to reconnect...');
+                logger.warn('This may indicate multiple bot instances running or too many connection attempts.');
+                // Don't exit, try to reconnect instead
+                if (!this.isReconnecting && !this.isShuttingDown) {
+                    await this.handleDisconnect();
+                } else {
+                    // If already reconnecting or shutting down, just log and exit
+                    console.error(error);
+                    await this.cleanup(true);
+                }
+            } else {
+                console.error(error);
+                await this.cleanup(true);
+            }
         });
 
         process.on('unhandledRejection', async (error) => {
-            logger.error(`Unhandled Rejection: ${error.message}`);
-            console.error(error);
-            await this.cleanup(true);
+            const errorMessage = error?.message || error?.toString() || String(error);
+            const isRateLimit = errorMessage.includes('429') || 
+                               errorMessage.includes('Unexpected server response: 429');
+            
+            logger.error(`Unhandled Rejection: ${errorMessage}`);
+            
+            if (isRateLimit) {
+                logger.warn('Rate limit error (429) in promise rejection. Attempting to reconnect...');
+                if (!this.isReconnecting && !this.isShuttingDown) {
+                    await this.handleDisconnect();
+                } else {
+                    console.error(error);
+                    await this.cleanup(true);
+                }
+            } else {
+                console.error(error);
+                await this.cleanup(true);
+            }
         });
     }
 
@@ -60,16 +93,64 @@ class FeydarBot {
             logger.section('🚀 Initializing Feydar Bot');
 
             logger.detail('Starting WebSocket Provider...');
-            this.provider = new ethers.WebSocketProvider(
-                `wss://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-                {
-                    name: 'base',
-                    chainId: 8453
+            
+            // Check for rate limit errors (429) during connection
+            let providerCreated = false;
+            try {
+                this.provider = new ethers.WebSocketProvider(
+                    `wss://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+                    {
+                        name: 'base',
+                        chainId: 8453
+                    }
+                );
+                providerCreated = true;
+                
+                // Set up error handler for WebSocket connection errors
+                if (this.provider.websocket) {
+                    this.provider.websocket.on('error', (error) => {
+                        const errorMessage = error.message || error.toString();
+                        if (errorMessage.includes('429') || errorMessage.includes('Unexpected server response: 429')) {
+                            logger.error('Rate limit error (429) from Alchemy. This may indicate multiple instances running or too many connection attempts.');
+                            logger.warn('Waiting before retry...');
+                        }
+                    });
                 }
-            );
-
-            await this.provider.ready;
-            logger.detail('✅ Provider Connected');
+                
+                await this.provider.ready;
+                logger.detail('✅ Provider Connected');
+            } catch (connectionError) {
+                const errorMessage = connectionError.message || connectionError.toString();
+                const isRateLimit = errorMessage.includes('429') || 
+                                   errorMessage.includes('Unexpected server response: 429') ||
+                                   connectionError.code === 429;
+                
+                if (isRateLimit) {
+                    logger.error('Rate limit error (429) when connecting to Alchemy WebSocket');
+                    logger.warn('This may indicate:');
+                    logger.warn('  - Multiple bot instances are running (check Railway for duplicate services)');
+                    logger.warn('  - Too many connection attempts in a short time');
+                    logger.warn('  - Alchemy API key rate limits exceeded');
+                    
+                    // Clean up the provider if it was created
+                    if (providerCreated && this.provider) {
+                        try {
+                            if (this.provider.websocket) {
+                                this.provider.websocket.removeAllListeners();
+                                this.provider.websocket.terminate();
+                            }
+                            await this.provider.destroy();
+                        } catch (cleanupError) {
+                            // Ignore cleanup errors
+                        }
+                        this.provider = null;
+                    }
+                    
+                    // Use longer delay for rate limit errors
+                    throw new Error('RATE_LIMIT_429');
+                }
+                throw connectionError;
+            }
 
             await this.initializeDiscord();
             logger.detail('✅ Discord client ready');
@@ -93,9 +174,9 @@ class FeydarBot {
             logger.detail('✅ Event listeners set up successfully');
             logger.sectionEnd();
 
-            logger.section('🔍 Starting Health Checks and Ping/Pong');
+            logger.section('🔍 Starting Health Checks');
             this.startHealthCheck();
-            this.startPingPong();
+            logger.detail('✅ Health checks started (Alchemy SDK handles ping/pong automatically)');
             logger.sectionEnd();
 
             logger.section('🚀 Bot Initialization Complete');
@@ -105,16 +186,39 @@ class FeydarBot {
             this.initCount = 0;
 
         } catch (error) {
-            logger.error(`Initialization error: ${error.message}`);
-            console.error('Full error:', error);
+            const errorMessage = error.message || error.toString();
+            const isRateLimit = errorMessage.includes('RATE_LIMIT_429') || 
+                               errorMessage.includes('429') ||
+                               errorMessage.includes('Unexpected server response: 429');
+            
+            logger.error(`Initialization error: ${errorMessage}`);
+            if (!isRateLimit) {
+                console.error('Full error:', error);
+            }
             
             if (this.initCount < MAX_RETRIES) {
                 this.initCount++;
-                const delay = Math.min(1000 * Math.pow(2, this.initCount), 30000);
-                logger.info(`Retrying initialization in ${delay}ms (attempt ${this.initCount}/${MAX_RETRIES})`);
+                
+                // Use longer delays for rate limit errors (start at 30 seconds, max 2 minutes)
+                let delay;
+                if (isRateLimit) {
+                    delay = Math.min(30000 * Math.pow(2, this.initCount - 1), 120000); // 30s, 60s, 120s max
+                    logger.warn(`Rate limit detected. Waiting ${delay/1000}s before retry (attempt ${this.initCount}/${MAX_RETRIES})`);
+                    logger.warn('Please check Railway to ensure only one bot instance is running.');
+                } else {
+                    delay = Math.min(1000 * Math.pow(2, this.initCount), 30000);
+                    logger.info(`Retrying initialization in ${delay}ms (attempt ${this.initCount}/${MAX_RETRIES})`);
+                }
+                
                 setTimeout(() => this.initialize(), delay);
             } else {
                 logger.error(`Failed to initialize after ${MAX_RETRIES} attempts`);
+                if (isRateLimit) {
+                    logger.error('Rate limit errors persist. Please:');
+                    logger.error('  1. Check Railway to ensure only ONE bot service is running');
+                    logger.error('  2. Wait a few minutes before redeploying');
+                    logger.error('  3. Verify your Alchemy API key rate limits');
+                }
                 process.exit(1);
             }
         }
@@ -791,21 +895,9 @@ class FeydarBot {
         }
     }
 
-    startPingPong() {
-        // Send a ping every 30 seconds
-        setInterval(() => {
-            if (this.provider?.websocket?.readyState === 1) { // 1 = OPEN
-                this.provider.websocket.ping();
-            }
-        }, 30000);
-
-        // Handle pong responses
-        if (this.provider?.websocket) {
-            this.provider.websocket.on('pong', () => {
-                this.lastEventTime = Date.now(); // Update last event time
-            });
-        }
-    }
+    // Note: Manual ping/pong removed - Alchemy SDK automatically sends net_version heartbeat pings
+    // every 30 seconds. These pings incur zero Compute Units and keep the connection alive.
+    // See: https://www.alchemy.com/support/what-s-the-right-way-for-the-client-to-send-a-ping-to-alchemy
 }
 
 // Start the bot
