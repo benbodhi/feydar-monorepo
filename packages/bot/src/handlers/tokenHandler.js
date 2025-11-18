@@ -80,19 +80,29 @@ async function handleTokenDeployment({
         const TOTAL_SUPPLY_TOKENS = 100_000_000_000n; // 100 billion tokens (in wei: 100b * 10^18)
         const TOTAL_SUPPLY_WEI = TOTAL_SUPPLY_TOKENS * 10n**18n;
         
-        let initialPurchaseText = null;
+        // Always calculate and show the percentage (even if 0%)
+        let percentage = 0;
+        let tokensReceivedFormatted = '0';
+        
         if (fullEventData?.tokensReceived) {
             const tokensReceivedBigInt = typeof fullEventData.tokensReceived === 'bigint' 
                 ? fullEventData.tokensReceived 
                 : BigInt(fullEventData.tokensReceived);
             
-            const percentage = TOTAL_SUPPLY_WEI > 0n
+            percentage = TOTAL_SUPPLY_WEI > 0n
                 ? (Number(tokensReceivedBigInt) / Number(TOTAL_SUPPLY_WEI)) * 100
                 : 0;
             
-            const tokensReceivedFormatted = formatSupplyWithCommas(tokensReceivedBigInt);
-            initialPurchaseText = `Dev bought: ${percentage.toFixed(2)}% of supply (${tokensReceivedFormatted} ${symbol})`;
+            tokensReceivedFormatted = formatSupplyWithCommas(tokensReceivedBigInt);
         }
+        
+        // Format percentage with up to 3 decimal places, removing trailing zeros
+        const roundedPercentage = Math.round(percentage * 1000) / 1000;
+        const percentageText = roundedPercentage % 1 === 0
+            ? `${roundedPercentage}%`
+            : `${roundedPercentage.toFixed(3).replace(/\.?0+$/, '')}%`;
+        
+        const initialPurchaseText = `Dev bought: ${percentageText} of supply (${tokensReceivedFormatted} ${symbol})`;
 
         logger.detail('---');
         logger.detail('Sending Discord message...');

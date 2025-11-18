@@ -4,6 +4,24 @@ const logger = require('./logger');
 const { createTradeLinks } = require('@feydar/shared/constants');
 
 /**
+ * Formats a percentage value with up to 3 decimal places, removing trailing zeros
+ * @param {number} percentage - The percentage value (e.g., 5.5 for 5.5%)
+ * @returns {string} - Formatted percentage string (e.g., "5.5%" or "10%" or "0.123%")
+ */
+function formatPercentage(percentage) {
+    // Round to 3 decimal places to avoid floating point issues
+    const rounded = Math.round(percentage * 1000) / 1000;
+    
+    // If it's a whole number, return without decimals
+    if (rounded % 1 === 0) {
+        return `${rounded}%`;
+    }
+    
+    // Otherwise, format with up to 3 decimal places and remove trailing zeros
+    return `${rounded.toFixed(3).replace(/\.?0+$/, '')}%`;
+}
+
+/**
  * Formats deployer address with all available names (basename, ENS, hex) and explorer links
  */
 function formatDeployerField(address, basename, ens) {
@@ -66,7 +84,8 @@ function createTokenEmbedFields(tokenData) {
         { name: 'Deployer', value: formatDeployerField(tokenData.deployer, tokenData.deployerBasename, tokenData.deployerENS), inline: false }
     ];
 
-    if (tokenData.initialPurchase) {
+    // Always show Initial Purchase field (will show 0% if no purchase was made)
+    if (tokenData.initialPurchase !== undefined && tokenData.initialPurchase !== null) {
         fields.push({
             name: 'Initial Purchase',
             value: tokenData.initialPurchase,
