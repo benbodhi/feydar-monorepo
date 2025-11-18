@@ -28,12 +28,17 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
   }
   deployerLines.push(truncateAddress(deployment.deployer));
 
-  // Fetch price data
-  const { data: priceData } = useQuery({
+  // Fetch price data - non-blocking, lazy loaded
+  // Only fetch when performance section is opened or card is visible
+  const [shouldFetchPrice, setShouldFetchPrice] = useState(priority); // Priority cards fetch immediately
+  const { data: priceData, isLoading: isPriceLoading } = useQuery({
     queryKey: ['tokenPrice', deployment.tokenAddress],
     queryFn: () => fetchTokenPrice(deployment.tokenAddress),
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 15000, // Consider stale after 15 seconds
+    enabled: shouldFetchPrice, // Only fetch when enabled
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes (was 30s)
+    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes (was 15s)
+    retry: 1, // Only retry once on failure
+    retryDelay: 2000, // Wait 2s before retry
   });
 
   // Update relative time - every second if under 1 minute, otherwise every minute
@@ -103,6 +108,13 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
   
   // Collapsible panel state for Price through Volume section
   const [isPerformanceOpen, setIsPerformanceOpen] = useState(false);
+
+  // Enable price fetching when performance section opens
+  useEffect(() => {
+    if (isPerformanceOpen && !shouldFetchPrice) {
+      setShouldFetchPrice(true);
+    }
+  }, [isPerformanceOpen, shouldFetchPrice]);
   
   const handleCopyAddress = async () => {
     try {
@@ -132,6 +144,17 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
 
   // Get price in FEY from API response
   const priceInFEY = priceData?.priceInFEY ?? null;
+  
+  // Calculate market cap if we have price data
+  const marketCap = priceData?.price && priceData.price > 0 
+    ? (() => {
+        const TOTAL_SUPPLY_TOKENS = 100_000_000_000; // 100 billion
+        const result = TOTAL_SUPPLY_TOKENS * priceData.price;
+        // If result is too large or invalid, return null
+        if (!isFinite(result) || result <= 0 || result > 1e15) return null;
+        return result;
+      })()
+    : null;
 
   return (
     <Card>
@@ -214,32 +237,37 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
         </div>
 
         {/* Price and Performance Section - Collapsible */}
-        {priceData && (
-          <div className="pb-6 border-b">
-            <button
-              onClick={() => setIsPerformanceOpen(!isPerformanceOpen)}
-              className={`w-full flex items-center justify-between text-sm text-foreground hover:opacity-80 transition-opacity ${
-                isPerformanceOpen ? 'mb-2' : ''
+        <div className="pb-6 border-b">
+          <button
+            onClick={() => {
+              setIsPerformanceOpen(!isPerformanceOpen);
+              // Trigger price fetch when opening
+              if (!isPerformanceOpen && !shouldFetchPrice) {
+                setShouldFetchPrice(true);
+              }
+            }}
+            className={`w-full flex items-center justify-between text-sm text-foreground hover:opacity-80 transition-opacity ${
+              isPerformanceOpen ? 'mb-2' : ''
+            }`}
+          >
+            <span>Price Data</span>
+            <ChevronDown 
+              className={`h-4 w-4 transition-transform duration-300 ease-in-out ${
+                isPerformanceOpen ? 'transform rotate-180' : ''
               }`}
-            >
-              <span>Price Data</span>
-              <ChevronDown 
-                className={`h-4 w-4 transition-transform duration-300 ease-in-out ${
-                  isPerformanceOpen ? 'transform rotate-180' : ''
-                }`}
-              />
-            </button>
-            <div
-              className={`grid transition-all duration-300 ease-in-out ${
-                isPerformanceOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="space-y-6 pt-4">
-                {/* Note about price data availability */}
-                <p className="text-xs text-muted-foreground">
-                  Price data may not be available yet.
-                </p>
+            />
+          </button>
+          <div
+            className={`grid transition-all duration-300 ease-in-out ${
+              isPerformanceOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-6 pt-4">
+              {/* Note about price data availability */}
+              <p className="text-xs text-muted-foreground">
+                {isPriceLoading ? 'Loading price data...' : priceData ? 'Price data may not be available yet.' : 'Click to load price data.'}
+              </p>
                 {/* Price Section */}
                 <div className="space-y-4">
                   {/* Price Row */}
@@ -247,27 +275,39 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                     <div className="flex-1 min-w-[120px]">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">USD</p>
                       <p className="text-lg font-semibold">
-                        {(() => {
-                          const formatted = formatPrice(priceData.price);
-                          if (typeof formatted === 'string') {
-                            return formatted === 'N/A' ? '?' : formatted;
-                          }
-                          return (
-                            <>
-                              {formatted.prefix}
-                              {formatted.zeroCount !== null && (
-                                <span className="text-[0.65em] align-sub leading-none">{formatted.zeroCount}</span>
-                              )}
-                              {formatted.digits}
-                            </>
-                          );
-                        })()}
+                        {isPriceLoading ? (
+                          <span className="text-muted-foreground">...</span>
+                        ) : priceData ? (
+                          (() => {
+                            const formatted = formatPrice(priceData.price);
+                            if (typeof formatted === 'string') {
+                              return formatted === 'N/A' ? '?' : formatted;
+                            }
+                            return (
+                              <>
+                                {formatted.prefix}
+                                {formatted.zeroCount !== null && (
+                                  <span className="text-[0.65em] align-sub leading-none">{formatted.zeroCount}</span>
+                                )}
+                                {formatted.digits}
+                              </>
+                            );
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground">?</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex-1 min-w-[120px] text-right">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">FEY</p>
                       <p className="text-lg font-semibold">
-                        {priceInFEY !== null ? `${priceInFEY.toFixed(6)} FEY` : '?'}
+                        {isPriceLoading ? (
+                          <span className="text-muted-foreground">...</span>
+                        ) : priceInFEY !== null ? (
+                          priceInFEY.toFixed(6)
+                        ) : (
+                          <span className="text-muted-foreground">?</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -276,7 +316,7 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                   <div className="grid grid-cols-3 gap-2 sm:gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">Liquidity</p>
-                      {priceData.liquidity === null || isNaN(priceData.liquidity) ? (
+                      {!priceData || priceData.liquidity === null || isNaN(priceData.liquidity) ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -288,14 +328,16 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <p className="text-sm sm:text-base font-semibold break-words">{formatCurrency(priceData.liquidity)}</p>
+                        <p className="text-sm sm:text-base font-semibold break-words">
+                          {priceData ? formatCurrency(priceData.liquidity) : '?'}
+                        </p>
                       )}
                     </div>
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground mb-1.5 font-medium">Market Cap</p>
                       <p className="text-sm sm:text-base font-semibold break-words">
                         {(() => {
-                          const formatted = formatCompactCurrency(priceData.marketCap);
+                          const formatted = formatCompactCurrency(marketCap);
                           return formatted === 'N/A' ? '?' : formatted;
                         })()}
                       </p>
@@ -321,49 +363,37 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
                         <p className={`text-sm font-semibold ${
-                          priceData.priceChange5m !== null && priceData.priceChange5m >= 0 ? 'text-green-medium dark:text-green-light' : 
-                          priceData.priceChange5m !== null ? 'text-destructive' : 'text-muted-foreground'
+                          priceData?.priceChange5m !== null && priceData?.priceChange5m !== undefined && priceData.priceChange5m >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData?.priceChange5m !== null && priceData?.priceChange5m !== undefined ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {(() => {
-                            const formatted = formatPercentChange(priceData.priceChange5m);
-                            return formatted === 'N/A' ? '?' : formatted;
-                          })()}
+                          {priceData ? formatPercentChange(priceData.priceChange5m) : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
                         <p className={`text-sm font-semibold ${
-                          priceData.priceChange1h !== null && priceData.priceChange1h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                          priceData.priceChange1h !== null ? 'text-destructive' : 'text-muted-foreground'
+                          priceData?.priceChange1h !== null && priceData?.priceChange1h !== undefined && priceData.priceChange1h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData?.priceChange1h !== null && priceData?.priceChange1h !== undefined ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {(() => {
-                            const formatted = formatPercentChange(priceData.priceChange1h);
-                            return formatted === 'N/A' ? '?' : formatted;
-                          })()}
+                          {priceData ? formatPercentChange(priceData.priceChange1h) : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
                         <p className={`text-sm font-semibold ${
-                          priceData.priceChange6h !== null && priceData.priceChange6h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                          priceData.priceChange6h !== null ? 'text-destructive' : 'text-muted-foreground'
+                          priceData?.priceChange6h !== null && priceData?.priceChange6h !== undefined && priceData.priceChange6h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData?.priceChange6h !== null && priceData?.priceChange6h !== undefined ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {(() => {
-                            const formatted = formatPercentChange(priceData.priceChange6h);
-                            return formatted === 'N/A' ? '?' : formatted;
-                          })()}
+                          {priceData ? formatPercentChange(priceData.priceChange6h) : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
                         <p className={`text-sm font-semibold ${
-                          priceData.priceChange24h !== null && priceData.priceChange24h >= 0 ? 'text-green-medium dark:text-green-light' : 
-                          priceData.priceChange24h !== null ? 'text-destructive' : 'text-muted-foreground'
+                          priceData?.priceChange24h !== null && priceData?.priceChange24h !== undefined && priceData.priceChange24h >= 0 ? 'text-green-medium dark:text-green-light' : 
+                          priceData?.priceChange24h !== null && priceData?.priceChange24h !== undefined ? 'text-destructive' : 'text-muted-foreground'
                         }`}>
-                          {(() => {
-                            const formatted = formatPercentChange(priceData.priceChange24h);
-                            return formatted === 'N/A' ? '?' : formatted;
-                          })()}
+                          {priceData ? formatPercentChange(priceData.priceChange24h) : '-'}
                         </p>
                       </div>
                     </div>
@@ -375,22 +405,22 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">5M</p>
-                        <p className="text-sm font-semibold text-muted-foreground">?</p>
+                        <p className="text-sm font-semibold text-muted-foreground">-</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">1H</p>
-                        <p className="text-sm font-semibold text-muted-foreground">?</p>
+                        <p className="text-sm font-semibold text-muted-foreground">-</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">6H</p>
-                        <p className="text-sm font-semibold text-muted-foreground">?</p>
+                        <p className="text-sm font-semibold text-muted-foreground">-</p>
                       </div>
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground mb-1.5 uppercase tracking-wide">24H</p>
                         <p className={`text-sm font-semibold ${
-                          priceData.volume24h === null || isNaN(priceData.volume24h) ? 'text-muted-foreground' : ''
+                          !priceData || priceData.volume24h === null || isNaN(priceData.volume24h) ? 'text-muted-foreground' : ''
                         }`}>
-                          {priceData.volume24h === null || isNaN(priceData.volume24h) ? '?' : formatCurrency(priceData.volume24h)}
+                          {!priceData || priceData.volume24h === null || isNaN(priceData.volume24h) ? '-' : formatCurrency(priceData.volume24h)}
                         </p>
                       </div>
                     </div>
@@ -400,7 +430,6 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
               </div>
             </div>
           </div>
-        )}
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>

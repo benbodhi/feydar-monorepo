@@ -51,7 +51,7 @@ pnpm install
    ALCHEMY_API_KEY=your_alchemy_api_key
    ```
    
-   **Note:** `ALCHEMY_API_KEY` is required for price data from Uniswap V4 pools. The same key works for both Base mainnet (for pool queries) and Ethereum mainnet (for ENS resolution).
+   **Note:** `ALCHEMY_API_KEY` is optional for the API service. Price data is now fetched from external APIs (Dexscreener, Codex, CoinGecko). Alchemy is only needed if you're using pool data queries or other Alchemy-specific features.
 
    **Webapp** (`packages/webapp/.env.local`):
    ```env
@@ -206,9 +206,9 @@ For services in the same Railway project, always use **Private Network**.
    
    **Required:**
    - `DATABASE_URL` = `${{ Postgres.DATABASE_URL }}` (use Private Network variable reference)
-   - `ALCHEMY_API_KEY` (required for price data from Uniswap V4 pools)
    
    **Recommended:**
+   - `FEY_TOKEN_ADDRESS` - FEY token contract address (recommended for priceInFEY calculations)
    - `PORT=3001` (defaults to 3001 if not set)
    - `NODE_ENV=production`
    - `CORS_ORIGIN` - Comma-separated list of allowed origins (required for production)
@@ -216,7 +216,7 @@ For services in the same Railway project, always use **Private Network**.
      - Include all production URLs: webapp, miniapp, and any custom domains
    
    **Optional:**
-   - `FEY_TOKEN_ADDRESS` (FEY token contract address, used for price calculations in FEY)
+   - `ALCHEMY_API_KEY` (optional, only needed for pool data queries or other Alchemy features)
    - `UNISWAP_V4_POOL_MANAGER` (defaults to `0x498581ff718922c3f8e6a244956af099b2652b2b`)
    - `UNISWAP_V4_STATE_VIEW` (defaults to `0xa3c0c9b65bad0b08107aa264b0f3db444b867a71`)
    - `PRISMA_LOG_QUERIES=true` (optional, enables Prisma query logging in development)

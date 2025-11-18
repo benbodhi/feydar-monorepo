@@ -75,7 +75,12 @@ CORS_ORIGIN=http://localhost:3000
 ALCHEMY_API_KEY=your_alchemy_api_key_here
 ```
 
-**Note:** `ALCHEMY_API_KEY` is required for price data from Uniswap V4 pools. The same key works for both Base mainnet (for pool queries) and Ethereum mainnet (for ENS resolution).
+**Note:** `ALCHEMY_API_KEY` is optional for the API service. Price data is now fetched from external APIs (Dexscreener, Codex, CoinGecko). Alchemy is only needed if you're using pool data queries or other Alchemy-specific features.
+
+**Recommended:** Add `FEY_TOKEN_ADDRESS` to enable FEY price calculations:
+```env
+FEY_TOKEN_ADDRESS=your_fey_token_address_here
+```
 
 **Create `packages/webapp/.env.local`:**
 ```env

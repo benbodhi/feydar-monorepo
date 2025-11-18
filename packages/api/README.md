@@ -11,10 +11,11 @@ REST API and WebSocket server for FEY Protocol token deployments.
 
 - REST API endpoints for querying deployments
 - WebSocket server for real-time deployment updates
-- Token price data from Uniswap V4 pools and Dexscreener
+- Token price data from external APIs (Dexscreener, Codex, CoinGecko) with fallback chain
 - Real-time liquidity, volume, and market data
 - PostgreSQL database via Prisma ORM
 - CORS support for webapp
+- Request queuing and rate limiting for external APIs
 
 ## Setup
 
@@ -33,6 +34,12 @@ NODE_ENV=development
 # CORS_ORIGIN=http://localhost:3000,http://localhost:3002
 # For production, set to your production URLs (comma-separated):
 # CORS_ORIGIN=https://your-webapp.railway.app,https://your-miniapp.railway.app
+
+# Recommended: FEY token address for priceInFEY calculations
+FEY_TOKEN_ADDRESS=your_fey_token_address_here
+
+# Optional: Alchemy API key (only needed for pool data queries or other Alchemy features)
+# ALCHEMY_API_KEY=your_alchemy_api_key
 ```
 
 3. Run database migrations:
@@ -64,7 +71,7 @@ pnpm build && pnpm start
 - `GET /token/:address` - Get token by address
 - `GET /token/:address/adjacent` - Get adjacent tokens (older and newer) for navigation
   - Returns: `{ older: TokenDeployment | null, newer: TokenDeployment | null }`
-- `GET /api/price/:tokenAddress` - Get token price data (Uniswap V4 + Dexscreener)
+- `GET /api/price/:tokenAddress` - Get token price data from external APIs (Dexscreener → Codex → CoinGecko)
 - `POST /api/broadcast` - Internal endpoint for bot to trigger WebSocket broadcast
 - `POST /api/notifications/send` - Internal endpoint for bot to send Farcaster notifications
   - Body: `TokenDeployment` object
@@ -82,7 +89,8 @@ pnpm build && pnpm start
 
 **Required:**
 - `DATABASE_URL` - PostgreSQL connection string (required)
-- `ALCHEMY_API_KEY` - Alchemy API key for Base mainnet and Ethereum mainnet (required for price data from Uniswap V4 pools)
+
+**Note:** `ALCHEMY_API_KEY` is no longer required for price data. Price data is now fetched from external APIs (Dexscreener, Codex, CoinGecko). Alchemy is only needed if you're using the bot service for monitoring blockchain events.
 
 **Required for Notifications:**
 - `NEYNAR_API_KEY` - Neynar API key for sending Farcaster notifications (required)
@@ -97,15 +105,33 @@ pnpm build && pnpm start
   - **Development:** `http://localhost:3000,http://localhost:3002` (webapp and miniapp)
   - **Production:** `https://your-webapp.railway.app,https://your-miniapp.railway.app` (your production URLs)
 
+**Recommended:**
+- `FEY_TOKEN_ADDRESS` - FEY token contract address (recommended, used for price calculations in FEY. If not set, priceInFEY will not be calculated)
+
 **Optional:**
-- `FEY_TOKEN_ADDRESS` - FEY token contract address (optional, used for price calculations in FEY)
+- `ALCHEMY_API_KEY` - Alchemy API key (optional, only needed if using pool data queries or other Alchemy features)
 - `UNISWAP_V4_POOL_MANAGER` - Uniswap V4 PoolManager address (default: `0x498581ff718922c3f8e6a244956af099b2652b2b`)
 - `UNISWAP_V4_STATE_VIEW` - Uniswap V4 StateView address (default: `0xa3c0c9b65bad0b08107aa264b0f3db444b867a71`)
 - `PRISMA_LOG_QUERIES` - Set to `true` to enable Prisma query logging in development (default: disabled)
 
-## Uniswap V4 Contract Addresses
+## Price Data Architecture
 
-The API uses Uniswap V4 contracts on Base for price data:
+The API fetches price data from external APIs with a fallback chain:
+
+1. **Dexscreener** (primary) - Fast, comprehensive DEX data
+2. **Codex (Defined.fi)** (fallback) - Alternative DEX aggregator
+3. **CoinGecko** (tertiary fallback) - Broader market coverage
+
+### Features:
+- **Request Queuing**: Prevents rate limiting (429 errors) by queuing requests
+- **Rate Limiting**: Enforces minimum intervals between API calls (200ms for Dexscreener)
+- **Caching**: 2-minute cache for price data, 10-minute cache for volume data
+- **Automatic Fallback**: If one API fails, automatically tries the next
+- **FEY Price Calculation**: Calculates token price in FEY if `FEY_TOKEN_ADDRESS` is set
+
+### Uniswap V4 Contract Addresses (Optional)
+
+These are only used if you need to query pool data directly (not used for price endpoint):
 
 | Contract | Address |
 |----------|---------|

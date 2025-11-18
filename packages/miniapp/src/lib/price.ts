@@ -157,9 +157,10 @@ export function formatPrice(price: number | null): { prefix: string; zeroCount: 
 
 /**
  * Formats a percentage change
+ * Returns "-" when no data (null/NaN) instead of "N/A"
  */
 export function formatPercentChange(value: number | null): string {
-  if (value === null || isNaN(value)) return 'N/A';
+  if (value === null || isNaN(value)) return '-';
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
 }

@@ -1,128 +1,20 @@
 import { Router } from 'express';
-import { ethers } from 'ethers';
-import { prisma } from '../db/client';
-import { getPriceData, subscribeToPoolSwaps } from '../services/priceCache';
-import { getSharedProvider } from '../services/provider';
+import { getExternalPriceData } from '../services/externalPrice';
 
 const router = Router();
 
 const FEY_TOKEN_ADDRESS = process.env.FEY_TOKEN_ADDRESS?.toLowerCase() || null;
 
-/**
- * Find FEY pair from Dexscreener pairs and extract price in FEY
- */
-function findPriceInFEYFromPairs(pairs: any[], tokenAddress: string): number | null {
-  if (!pairs || pairs.length === 0) {
-    return null;
-  }
-
-  const feyPair = pairs.find((pair: any) => {
-    const baseSymbol = pair.baseToken?.symbol?.toUpperCase();
-    const quoteSymbol = pair.quoteToken?.symbol?.toUpperCase();
-    const baseAddress = pair.baseToken?.address?.toLowerCase();
-    const quoteAddress = pair.quoteToken?.address?.toLowerCase();
-    const tokenAddr = tokenAddress.toLowerCase();
-
-    // Check if this pair involves our token and FEY
-    const hasToken = baseAddress === tokenAddr || quoteAddress === tokenAddr;
-    const hasFEY = baseSymbol === 'FEY' || quoteSymbol === 'FEY' || 
-                   (FEY_TOKEN_ADDRESS && (baseAddress === FEY_TOKEN_ADDRESS || quoteAddress === FEY_TOKEN_ADDRESS));
-
-    return hasToken && hasFEY;
-  });
-
-  if (!feyPair) {
-    return null;
-  }
-
-  const baseSymbol = feyPair.baseToken?.symbol?.toUpperCase();
-  const quoteSymbol = feyPair.quoteToken?.symbol?.toUpperCase();
-  const baseAddress = feyPair.baseToken?.address?.toLowerCase();
-  const quoteAddress = feyPair.quoteToken?.address?.toLowerCase();
-  const tokenAddr = tokenAddress.toLowerCase();
-
-  const isQuoteFEY = quoteSymbol === 'FEY' || 
-                     (FEY_TOKEN_ADDRESS && quoteAddress === FEY_TOKEN_ADDRESS);
-  
-  const isBaseFEY = baseSymbol === 'FEY' || 
-                    (FEY_TOKEN_ADDRESS && baseAddress === FEY_TOKEN_ADDRESS);
-
-  if (isQuoteFEY) {
-    const priceStr = feyPair.priceNative;
-    if (priceStr) {
-      const price = parseFloat(priceStr);
-      return price > 0 ? price : null;
-    }
-  } else if (isBaseFEY) {
-    const priceStr = feyPair.priceNative;
-    if (priceStr) {
-      const price = parseFloat(priceStr);
-      return price > 0 ? 1 / price : null;
-    }
-  }
-
-  return null;
-}
-
-/**
- * Calculate price in FEY if token is paired with FEY
- */
-async function calculatePriceInFEY(
-  tokenPriceUSD: number | null,
-  pairedToken: string | null,
-  dexscreenerPairs?: any[],
-  tokenAddress?: string
-): Promise<number | null> {
-  if (dexscreenerPairs && dexscreenerPairs.length > 0 && tokenAddress) {
-    const priceInFEY = findPriceInFEYFromPairs(dexscreenerPairs, tokenAddress);
-    if (priceInFEY !== null) {
-      return priceInFEY;
-    }
-  }
-
-  if (!tokenPriceUSD || !pairedToken || !FEY_TOKEN_ADDRESS) {
-    return null;
-  }
-
-  if (pairedToken.toLowerCase() !== FEY_TOKEN_ADDRESS) {
-    return null;
-  }
-
-  try {
-    const feyResponse = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${FEY_TOKEN_ADDRESS}`
-    );
-    
-    if (!feyResponse.ok) {
-      return null;
-    }
-
-    const feyData = await feyResponse.json() as { pairs?: Array<{ liquidity?: { usd?: number }; priceUsd?: string }> };
-    if (!feyData.pairs || feyData.pairs.length === 0) {
-      return null;
-    }
-
-    const bestFEYPair = feyData.pairs.reduce((prev: any, current: any) => {
-      const prevLiquidity = prev.liquidity?.usd || 0;
-      const currentLiquidity = current.liquidity?.usd || 0;
-      return currentLiquidity > prevLiquidity ? current : prev;
-    });
-
-    const feyPriceUSD = bestFEYPair.priceUsd ? parseFloat(bestFEYPair.priceUsd) : null;
-    if (!feyPriceUSD || feyPriceUSD <= 0) {
-      return null;
-    }
-
-    return tokenPriceUSD / feyPriceUSD;
-  } catch (error) {
-    console.error('Error calculating price in FEY:', error);
-    return null;
-  }
+// Log FEY_TOKEN_ADDRESS status on startup
+if (!FEY_TOKEN_ADDRESS) {
+  console.warn('[PriceRoute] FEY_TOKEN_ADDRESS not set in environment variables. priceInFEY will not be calculated.');
+} else {
+  console.log(`[PriceRoute] FEY_TOKEN_ADDRESS is set: ${FEY_TOKEN_ADDRESS}`);
 }
 
 /**
  * GET /api/price/:tokenAddress
- * Get token price data
+ * Get token price data from external APIs (Dexscreener/Codex/CoinGecko)
  */
 router.get('/:tokenAddress', async (req, res) => {
   try {
@@ -132,200 +24,35 @@ router.get('/:tokenAddress', async (req, res) => {
       return res.status(400).json({ error: 'Invalid token address' });
     }
 
-    const deployment = await prisma.deployment.findUnique({
-      where: { tokenAddress: tokenAddress.toLowerCase() },
-      select: { poolId: true },
-    });
+    console.log(`[PriceRoute] Fetching price for ${tokenAddress}, FEY_TOKEN_ADDRESS: ${FEY_TOKEN_ADDRESS || 'NOT SET'}`);
 
-    if (deployment?.poolId && process.env.ALCHEMY_API_KEY) {
-      try {
-        // Use shared provider to avoid creating new connections (saves Compute Units)
-        const provider = getSharedProvider();
-
-        const poolManagerAddress = process.env.UNISWAP_V4_POOL_MANAGER || '0x498581ff718922c3f8e6a244956af099b2652b2b';
-        await subscribeToPoolSwaps(
-          tokenAddress.toLowerCase(),
-          deployment.poolId,
-          poolManagerAddress,
-          provider
-        );
-
-        const poolData = await getPriceData(
-          tokenAddress.toLowerCase(),
-          deployment.poolId,
-          FEY_TOKEN_ADDRESS,
-          provider
-        );
-
-        if (poolData.price !== null || poolData.liquidity !== null) {
-          let dexscreenerData: any = null;
-          let allPairs: any[] = [];
-          try {
-            const dexscreenerResponse = await fetch(
-              `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
-            );
-            if (dexscreenerResponse.ok) {
-              const data = await dexscreenerResponse.json() as { pairs?: any[] };
-              allPairs = data.pairs || [];
-              if (allPairs.length > 0) {
-                const bestPair = allPairs.reduce((prev: any, current: any) => {
-                  const prevLiquidity = prev.liquidity?.usd || 0;
-                  const currentLiquidity = current.liquidity?.usd || 0;
-                  return currentLiquidity > prevLiquidity ? current : prev;
-                });
-                dexscreenerData = bestPair;
-              }
-            }
-          } catch {
-            // Ignore Dexscreener errors
-          }
-
-          const priceUSD = dexscreenerData?.priceUsd ? parseFloat(dexscreenerData.priceUsd) : (poolData.price || null);
-          const priceInFEY = await calculatePriceInFEY(priceUSD, FEY_TOKEN_ADDRESS, allPairs, tokenAddress.toLowerCase());
-          // Prefer Dexscreener liquidity, but fall back to calculated pool liquidity
-          const liquidityUSD = dexscreenerData?.liquidity?.usd 
-            ? parseFloat(dexscreenerData.liquidity.usd) 
-            : (poolData.liquidity || null);
-
-          return res.json({
-            price: priceUSD,
-            priceInFEY: priceInFEY,
-            priceChange5m: dexscreenerData?.priceChange?.m5 ? parseFloat(dexscreenerData.priceChange.m5) : null,
-            priceChange1h: dexscreenerData?.priceChange?.h1 ? parseFloat(dexscreenerData.priceChange.h1) : null,
-            priceChange6h: dexscreenerData?.priceChange?.h6 ? parseFloat(dexscreenerData.priceChange.h6) : null,
-            priceChange24h: dexscreenerData?.priceChange?.h24 ? parseFloat(dexscreenerData.priceChange.h24) : null,
-            marketCap: dexscreenerData?.marketCap ? parseFloat(dexscreenerData.marketCap) : null,
-            liquidity: liquidityUSD,
-            volume24h: poolData.volume24h || (dexscreenerData?.volume?.h24 ? parseFloat(dexscreenerData.volume.h24) : null),
-            txns24h: poolData.txns24h || (dexscreenerData?.txns?.h24?.total || null),
-            buys24h: poolData.buys24h || (dexscreenerData?.txns?.h24?.buys || null),
-            sells24h: poolData.sells24h || (dexscreenerData?.txns?.h24?.sells || null),
-            buyVolume24h: poolData.buyVolume24h || (dexscreenerData?.volume?.h24Buy || null),
-            sellVolume24h: poolData.sellVolume24h || (dexscreenerData?.volume?.h24Sell || null),
-            buyers24h: poolData.buyers24h || (dexscreenerData?.txns?.h24?.buyers || null),
-            sellers24h: poolData.sellers24h || (dexscreenerData?.txns?.h24?.sellers || null),
-            makers24h: poolData.makers24h || (dexscreenerData?.txns?.h24?.makers || null),
-          });
-        }
-      } catch (poolError) {
-        console.error('Error querying pool data:', poolError);
-      }
-    }
-
-    const dexscreenerResponse = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`
+    // Fetch price data from external APIs with fallback chain
+    const priceData = await getExternalPriceData(
+      tokenAddress.toLowerCase(),
+      FEY_TOKEN_ADDRESS
     );
 
-    if (!dexscreenerResponse.ok) {
-      return res.status(dexscreenerResponse.status).json({
-        price: null,
-        priceInFEY: null,
-        priceChange5m: null,
-        priceChange1h: null,
-        priceChange6h: null,
-        priceChange24h: null,
-        marketCap: null,
-        liquidity: null,
-        volume24h: null,
-        txns24h: null,
-        buys24h: null,
-        sells24h: null,
-        buyVolume24h: null,
-        sellVolume24h: null,
-        buyers24h: null,
-        sellers24h: null,
-        makers24h: null,
-      });
-    }
+    console.log(`[PriceRoute] Price data for ${tokenAddress}: price=${priceData.price}, priceInFEY=${priceData.priceInFEY}`);
 
-    const data = await dexscreenerResponse.json() as {
-      pairs?: Array<{
-        liquidity?: { usd?: number | string };
-        priceUsd?: string;
-        priceChange?: {
-          m5?: string;
-          h1?: string;
-          h6?: string;
-          h24?: string;
-        };
-        marketCap?: string | number;
-        volume?: {
-          h24?: string | number;
-          h24Buy?: string | number;
-          h24Sell?: string | number;
-        };
-        txns?: {
-          h24?: {
-            buys?: number;
-            sells?: number;
-            total?: number;
-            buyers?: number;
-            sellers?: number;
-            makers?: number;
-          };
-        };
-      }>;
-    };
-
-    if (!data.pairs || data.pairs.length === 0) {
-      return res.json({
-        price: null,
-        priceInFEY: null,
-        priceChange5m: null,
-        priceChange1h: null,
-        priceChange6h: null,
-        priceChange24h: null,
-        marketCap: null,
-        liquidity: null,
-        volume24h: null,
-        txns24h: null,
-        buys24h: null,
-        sells24h: null,
-        buyVolume24h: null,
-        sellVolume24h: null,
-        buyers24h: null,
-        sellers24h: null,
-        makers24h: null,
-      });
-    }
-
-    const bestPair = data.pairs.reduce((prev: any, current: any) => {
-      const prevLiquidity = prev.liquidity?.usd || 0;
-      const currentLiquidity = current.liquidity?.usd || 0;
-      return currentLiquidity > prevLiquidity ? current : prev;
-    });
-
-    const priceUSD = bestPair.priceUsd ? parseFloat(bestPair.priceUsd) : null;
-    const priceInFEY = await calculatePriceInFEY(priceUSD, FEY_TOKEN_ADDRESS, data.pairs || [], tokenAddress.toLowerCase());
-
+    // Return data in the same format as before (no breaking changes)
     res.json({
-      price: priceUSD,
-      priceInFEY: priceInFEY,
-      priceChange5m: bestPair.priceChange?.m5
-        ? parseFloat(bestPair.priceChange.m5)
-        : null,
-      priceChange1h: bestPair.priceChange?.h1
-        ? parseFloat(bestPair.priceChange.h1)
-        : null,
-      priceChange6h: bestPair.priceChange?.h6
-        ? parseFloat(bestPair.priceChange.h6)
-        : null,
-      priceChange24h: bestPair.priceChange?.h24
-        ? parseFloat(bestPair.priceChange.h24)
-        : null,
-      marketCap: bestPair.marketCap ? parseFloat(String(bestPair.marketCap)) : null,
-      liquidity: bestPair.liquidity?.usd ? parseFloat(String(bestPair.liquidity.usd)) : null,
-      volume24h: bestPair.volume?.h24 ? parseFloat(String(bestPair.volume.h24)) : null,
-      txns24h: bestPair.txns?.h24?.buys && bestPair.txns?.h24?.sells
-        ? (bestPair.txns.h24.buys + bestPair.txns.h24.sells)
-        : bestPair.txns?.h24?.total || null,
-      buys24h: bestPair.txns?.h24?.buys || null,
-      sells24h: bestPair.txns?.h24?.sells || null,
-      buyVolume24h: bestPair.volume?.h24Buy ? parseFloat(String(bestPair.volume.h24Buy)) : null,
-      sellVolume24h: bestPair.volume?.h24Sell ? parseFloat(String(bestPair.volume.h24Sell)) : null,
-      buyers24h: bestPair.txns?.h24?.buyers || null,
-      sellers24h: bestPair.txns?.h24?.sellers || null,
-      makers24h: bestPair.txns?.h24?.makers || null,
+      price: priceData.price,
+      priceInFEY: priceData.priceInFEY,
+      priceChange5m: priceData.priceChange5m,
+      priceChange1h: priceData.priceChange1h,
+      priceChange6h: priceData.priceChange6h,
+      priceChange24h: priceData.priceChange24h,
+      marketCap: priceData.marketCap,
+      liquidity: priceData.liquidity,
+      volume24h: priceData.volume24h,
+      txns24h: priceData.txns24h,
+      buys24h: priceData.buys24h,
+      sells24h: priceData.sells24h,
+      buyVolume24h: priceData.buyVolume24h,
+      sellVolume24h: priceData.sellVolume24h,
+      buyers24h: priceData.buyers24h,
+      sellers24h: priceData.sellers24h,
+      makers24h: priceData.makers24h,
     });
   } catch (error: any) {
     console.error('Error fetching token price:', error);
