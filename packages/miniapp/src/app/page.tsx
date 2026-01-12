@@ -138,7 +138,7 @@ export default function HomePage() {
           <div>
             <h1 className="text-3xl font-bold mb-1">FEYDAR</h1>
             <p className="text-sm text-muted-foreground">
-              Monitoring FEY Protocol token deployments on Base in real-time
+              Monitor new FEY tokens on Base in real-time
             </p>
           </div>
         </div>
@@ -150,8 +150,17 @@ export default function HomePage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Header />
-        <p className="text-muted-foreground">Loading deployments...</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Image
+            src="/feydar-logo.png"
+            alt="FEYDAR Logo"
+            width={64}
+            height={64}
+            className="animate-spin mb-4"
+            unoptimized
+          />
+          <p className="text-muted-foreground">Loading Tokens</p>
+        </div>
       </div>
     );
   }
@@ -202,7 +211,17 @@ export default function HomePage() {
           
         </>
       ) : isLoading ? (
-        <p className="text-muted-foreground">Loading deployments...</p>
+        <div className="flex flex-col items-center justify-center min-h-[40vh]">
+          <Image
+            src="/feydar-logo.png"
+            alt="FEYDAR Logo"
+            width={64}
+            height={64}
+            className="animate-spin mb-4"
+            unoptimized
+          />
+          <p className="text-muted-foreground">Loading Tokens</p>
+        </div>
       ) : (
         <p className="text-muted-foreground">No deployments found.</p>
       )}

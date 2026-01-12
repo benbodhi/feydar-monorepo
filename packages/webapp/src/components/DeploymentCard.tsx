@@ -106,6 +106,9 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
   // Clipboard state
   const [copied, setCopied] = useState(false);
   
+  // Image error state
+  const [imageError, setImageError] = useState(false);
+  
   // Collapsible panel state for Price through Volume section
   const [isPerformanceOpen, setIsPerformanceOpen] = useState(false);
 
@@ -202,7 +205,7 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
               </a>
             </div>
             <div className="mt-2 relative w-full aspect-square rounded-lg overflow-hidden bg-black">
-              {deployment.currentImageUrl || deployment.tokenImage ? (
+              {(deployment.currentImageUrl || deployment.tokenImage) && !imageError ? (
                 <Image
                   src={formatIPFSUrl(deployment.currentImageUrl || deployment.tokenImage || '')}
                   alt={deployment.name}
@@ -211,6 +214,7 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                   unoptimized
                   loading={priority ? "eager" : "lazy"}
                   priority={priority}
+                  onError={() => setImageError(true)}
                 />
               ) : (
                 <div className="relative w-full h-full flex flex-col items-center justify-center">
@@ -461,10 +465,10 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                 </div>
                 <div className="relative w-full bg-muted rounded-full h-4 overflow-visible">
                   {/* Weighted slider with center line */}
-                  <div className="relative h-full flex items-center rounded-full">
+                  <div className="relative h-full rounded-full">
                     {/* Left side (Creator) - darker green */}
                     <div
-                      className={`h-full bg-green-dark ${
+                      className={`absolute left-0 top-0 h-full bg-green-dark ${
                         deployment.creatorBps === 10000 ? 'rounded-full' : 'rounded-l-full'
                       }`}
                       style={{ width: `${(deployment.creatorBps / 10000) * 100}%` }}
@@ -483,6 +487,8 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                       const difference = feyStakersPercent - creatorPercent;
                       const isFeyStakersMore = difference > 0;
                       const intensity = Math.min(Math.abs(difference) / 50, 1); // Scale from 0 to 1
+                      // Ensure FEY stakers fills remaining space to 100%
+                      const remainingWidth = 100 - creatorPercent;
                       
                       if (isFeyStakersMore && intensity > 0.1) {
                         // Progressive enhancement based on how much more FEY stakers get
@@ -490,11 +496,12 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                         const glowIntensity = intensity;
                         return (
                           <div
-                            className={`h-full bg-gradient-to-r from-green-medium via-green-light to-green-light transition-all ${
+                            className={`absolute left-0 top-0 h-full bg-gradient-to-r from-green-medium via-green-light to-green-light transition-all ${
                               deployment.creatorBps === 0 ? 'rounded-full' : 'rounded-r-full'
                             }`}
                             style={{ 
-                              width: `${feyStakersPercent}%`,
+                              left: `${creatorPercent}%`,
+                              width: `${remainingWidth}%`,
                               boxShadow: `0 0 ${8 + intensity * 8}px rgba(79, 198, 95, ${0.3 + glowIntensity * 0.4})`,
                               filter: `brightness(${1 + intensity * 0.15}) saturate(${1 + intensity * 0.1})`
                             }}
@@ -503,10 +510,13 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
                       }
                       return (
                         <div
-                          className={`h-full bg-primary ${
+                          className={`absolute left-0 top-0 h-full bg-primary ${
                             deployment.creatorBps === 0 ? 'rounded-full' : 'rounded-r-full'
                           }`}
-                          style={{ width: `${feyStakersPercent}%` }}
+                          style={{ 
+                            left: `${creatorPercent}%`,
+                            width: `${remainingWidth}%`
+                          }}
                         />
                       );
                     })()}
