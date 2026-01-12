@@ -60,7 +60,7 @@ export function TokenPromo() {
               {tokenName}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {tokenSymbol}
+              ${tokenSymbol}
             </p>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
