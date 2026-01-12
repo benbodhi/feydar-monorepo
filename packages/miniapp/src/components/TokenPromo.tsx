@@ -12,12 +12,17 @@ const FEYDAR_TOKEN_ADDRESS = '0x41ab6804641D2af063105A56E40A442f30c17937';
 
 export function TokenPromo() {
   // Fetch token deployment data
-  const { data: deployment, isLoading: isLoadingDeployment } = useQuery({
+  const { data: deployment, isLoading: isLoadingDeployment, error: deploymentError } = useQuery({
     queryKey: ['deployment', FEYDAR_TOKEN_ADDRESS],
     queryFn: () => fetchDeploymentByAddress(FEYDAR_TOKEN_ADDRESS),
     refetchInterval: 60000, // Refetch every minute
     staleTime: 30000, // Consider stale after 30 seconds
   });
+  
+  // Log errors for debugging
+  if (deploymentError) {
+    console.error('[TokenPromo] Error fetching deployment:', deploymentError);
+  }
 
   // Fetch price data for market cap
   const { data: priceData, isLoading: isLoadingPrice } = useQuery({

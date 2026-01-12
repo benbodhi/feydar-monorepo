@@ -53,10 +53,19 @@ export async function fetchLatestDeployments(limit: number = 20): Promise<{
 export async function fetchDeploymentByAddress(
   address: string
 ): Promise<TokenDeployment> {
-  const response = await fetch(`${API_URL}/token/${address}`);
+  const url = `${API_URL}/token/${address}`;
+  console.log('[fetchDeploymentByAddress] Fetching from:', url);
+  
+  const response = await fetch(url);
+  
   if (!response.ok) {
-    throw new Error('Failed to fetch deployment');
+    const errorText = await response.text().catch(() => 'Unknown error');
+    console.error(`[fetchDeploymentByAddress] API Error (${response.status}):`, errorText);
+    console.error(`[fetchDeploymentByAddress] Requested address:`, address);
+    console.error(`[fetchDeploymentByAddress] API URL:`, API_URL);
+    throw new Error(`Failed to fetch deployment: ${response.status} ${response.statusText}`);
   }
+  
   return response.json();
 }
 

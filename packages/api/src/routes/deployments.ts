@@ -199,14 +199,20 @@ router.get('/:address/adjacent', async (req, res) => {
 router.get('/:address', async (req, res) => {
   try {
     const { address } = req.params;
+    const normalizedAddress = address.toLowerCase();
+    
+    console.log(`[GET /token/:address] Request for address: ${address} (normalized: ${normalizedAddress})`);
 
     const deployment = await prisma.deployment.findUnique({
-      where: { tokenAddress: address.toLowerCase() },
+      where: { tokenAddress: normalizedAddress },
     });
 
     if (!deployment) {
+      console.log(`[GET /token/:address] Token not found in database: ${normalizedAddress}`);
       return res.status(404).json({ error: 'Deployment not found' });
     }
+    
+    console.log(`[GET /token/:address] Found deployment: ${deployment.name} (${deployment.symbol})`);
 
     res.json({
       id: deployment.id,
