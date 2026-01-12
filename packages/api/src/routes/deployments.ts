@@ -199,79 +199,60 @@ router.get('/:address/adjacent', async (req, res) => {
 router.get('/:address', async (req, res) => {
   try {
     const { address } = req.params;
-    const normalizedAddress = address.toLowerCase();
     
-    console.log(`[GET /token/:address] Request for address: ${address} (normalized: ${normalizedAddress})`);
+    // Use case-insensitive search to handle both lowercase and mixed-case addresses
+    // This works for tokens stored with any case (legacy mixed-case or normalized lowercase)
+    const result = await prisma.$queryRaw<Array<{
+      id: number;
+      tokenAddress: string;
+      name: string;
+      symbol: string;
+      deployer: string;
+      deployerBasename: string | null;
+      deployerENS: string | null;
+      transactionHash: string;
+      tokenImage: string | null;
+      currentAdmin: string | null;
+      currentImageUrl: string | null;
+      metadata: string | null;
+      context: string | null;
+      isVerified: boolean | null;
+      creatorBps: number | null;
+      feyStakersBps: number | null;
+      poolId: string | null;
+      blockNumber: bigint;
+      createdAt: Date;
+    }>>`
+      SELECT * FROM deployments WHERE LOWER("tokenAddress") = LOWER(${address}) LIMIT 1
+    `;
 
-    // First try exact match with normalized address
-    let deployment = await prisma.deployment.findUnique({
-      where: { tokenAddress: normalizedAddress },
-    });
-
-    // If not found, try original address as-is (in case token was stored with mixed case before normalization)
-    if (!deployment && address !== normalizedAddress) {
-      console.log(`[GET /token/:address] Normalized match not found, trying original address: ${address}`);
-      deployment = await prisma.deployment.findUnique({
-        where: { tokenAddress: address },
-      });
-      
-      if (deployment) {
-        console.log(`[GET /token/:address] Found with original address! Stored as: ${deployment.tokenAddress}`);
-      }
-    }
-    
-    // If still not found, try case-insensitive search using raw SQL
-    if (!deployment) {
-      console.log(`[GET /token/:address] Trying case-insensitive SQL search...`);
-      const result = await prisma.$queryRaw<Array<{ "tokenAddress": string }>>`
-        SELECT "tokenAddress" FROM deployments WHERE LOWER("tokenAddress") = LOWER(${address}) LIMIT 1
-      `;
-      
-      if (result.length > 0) {
-        const foundAddress = result[0].tokenAddress;
-        console.log(`[GET /token/:address] Found case-insensitive match! Stored as: ${foundAddress}`);
-        deployment = await prisma.deployment.findUnique({
-          where: { tokenAddress: foundAddress },
-        });
-      }
-    }
-
-    if (!deployment) {
-      console.log(`[GET /token/:address] Token not found in database: ${normalizedAddress}`);
-      // Debug: Check total count and a sample
-      const totalCount = await prisma.deployment.count();
-      console.log(`[GET /token/:address] Total deployments in DB: ${totalCount}`);
-      if (totalCount > 0) {
-        const sample = await prisma.deployment.findFirst({
-          select: { tokenAddress: true, name: true, symbol: true },
-        });
-        console.log(`[GET /token/:address] Sample deployment: ${sample?.tokenAddress} (${sample?.name})`);
-      }
+    if (result.length === 0) {
       return res.status(404).json({ error: 'Deployment not found' });
     }
-    
-    console.log(`[GET /token/:address] Found deployment: ${deployment.name} (${deployment.symbol})`);
 
+    const rawDeployment = result[0];
+    
+    // Return in the same format as before
     res.json({
-      id: deployment.id,
-      tokenAddress: deployment.tokenAddress,
-      name: deployment.name,
-      symbol: deployment.symbol,
-      deployer: deployment.deployer,
-      deployerBasename: deployment.deployerBasename,
-      deployerENS: deployment.deployerENS,
-      transactionHash: deployment.transactionHash,
-      tokenImage: deployment.tokenImage,
-      currentAdmin: deployment.currentAdmin,
-      currentImageUrl: deployment.currentImageUrl,
-      metadata: deployment.metadata,
-      context: deployment.context,
-      isVerified: deployment.isVerified,
-      creatorBps: deployment.creatorBps,
-      feyStakersBps: deployment.feyStakersBps,
-      poolId: deployment.poolId,
-      blockNumber: Number(deployment.blockNumber),
-      createdAt: deployment.createdAt,
+      id: rawDeployment.id,
+      tokenAddress: rawDeployment.tokenAddress,
+      name: rawDeployment.name,
+      symbol: rawDeployment.symbol,
+      deployer: rawDeployment.deployer,
+      deployerBasename: rawDeployment.deployerBasename,
+      deployerENS: rawDeployment.deployerENS,
+      transactionHash: rawDeployment.transactionHash,
+      tokenImage: rawDeployment.tokenImage,
+      currentAdmin: rawDeployment.currentAdmin,
+      currentImageUrl: rawDeployment.currentImageUrl,
+      metadata: rawDeployment.metadata,
+      context: rawDeployment.context,
+      isVerified: rawDeployment.isVerified,
+      creatorBps: rawDeployment.creatorBps,
+      feyStakersBps: rawDeployment.feyStakersBps,
+      poolId: rawDeployment.poolId,
+      blockNumber: Number(rawDeployment.blockNumber),
+      createdAt: rawDeployment.createdAt,
     });
   } catch (error: any) {
     console.error('Error fetching deployment:', error);

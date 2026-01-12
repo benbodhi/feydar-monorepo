@@ -213,11 +213,14 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
               {(() => {
                 const imageUrl = deployment.currentImageUrl || deployment.tokenImage;
                 const formattedUrl = imageUrl ? formatIPFSUrl(imageUrl) : '';
+                // Check if URL is a placeholder service (placehold.co)
+                const isPlaceholderUrl = formattedUrl.includes('placehold.co');
                 const isValidImageUrl = imageUrl && 
                   typeof imageUrl === 'string' && 
                   imageUrl.trim().length > 0 && 
                   formattedUrl.trim().length > 0 &&
                   formattedUrl !== 'https://ipfs.io/ipfs/' && // Catch empty IPFS URLs
+                  !isPlaceholderUrl && // Catch placeholder service URLs
                   !imageError;
                 
                 if (isValidImageUrl) {
