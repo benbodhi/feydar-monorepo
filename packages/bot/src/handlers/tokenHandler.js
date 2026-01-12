@@ -185,7 +185,7 @@ async function handleTokenDeployment({
                 throw new Error('Missing blockNumber or provider - cannot determine deployment timestamp');
             }
 
-            await prisma.deployment.upsert({
+            const savedDeployment = await prisma.deployment.upsert({
                 where: { tokenAddress },
                                                 update: {
                                                     name: truncatedName,
@@ -219,19 +219,22 @@ async function handleTokenDeployment({
             });
             logger.detail('✅ Saved to database');
 
+            // Use the saved deployment record which includes id and all fields
             const deploymentData = {
-                tokenAddress,
-                name,
-                symbol,
-                deployer,
-                deployerBasename: deployerInfo.basename,
-                deployerENS: deployerInfo.ens,
-                transactionHash,
-                tokenImage: fullEventData?.tokenImage,
-                creatorBps,
-                feyStakersBps,
-                blockNumber: Number(blockNumber || 0),
-                createdAt,
+                id: savedDeployment.id,
+                tokenAddress: savedDeployment.tokenAddress,
+                name: savedDeployment.name,
+                symbol: savedDeployment.symbol,
+                deployer: savedDeployment.deployer,
+                deployerBasename: deployerInfo.basename, // Use resolved name from nameResolver
+                deployerENS: deployerInfo.ens, // Use resolved ENS from nameResolver
+                transactionHash: savedDeployment.transactionHash,
+                tokenImage: savedDeployment.tokenImage,
+                creatorBps: savedDeployment.creatorBps,
+                feyStakersBps: savedDeployment.feyStakersBps,
+                poolId: savedDeployment.poolId,
+                blockNumber: Number(savedDeployment.blockNumber),
+                createdAt: savedDeployment.createdAt,
             };
 
             try {

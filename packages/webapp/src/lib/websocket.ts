@@ -40,8 +40,6 @@ export class DeploymentWebSocket {
 
           if (message.type === 'deployment') {
             this.listeners.forEach((listener) => listener(message.data));
-          } else if (message.type === 'pong') {
-            // Heartbeat response
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);

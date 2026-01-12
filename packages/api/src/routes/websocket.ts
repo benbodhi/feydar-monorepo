@@ -30,11 +30,23 @@ export function broadcastDeployment(deployment: any) {
   };
 
   const payload = JSON.stringify(message);
+  let sentCount = 0;
   clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
+      try {
+        client.send(payload);
+        sentCount++;
+      } catch (error) {
+        console.error('Error sending WebSocket message to client:', error);
+      }
     }
   });
+  
+  if (sentCount > 0) {
+    console.log(`[WebSocket] Broadcasted deployment ${deployment.tokenAddress} to ${sentCount} client(s)`);
+  } else {
+    console.warn(`[WebSocket] No connected clients to broadcast deployment ${deployment.tokenAddress}`);
+  }
 }
 
 /**
@@ -45,36 +57,14 @@ export function websocketHandler(wss: WebSocketServer) {
     clients.add(ws);
     console.log(`WebSocket client connected. Total clients: ${clients.size}`);
 
-    // Send ping every 30 seconds to keep connection alive
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 30000);
-
-    ws.on('message', async (message: string) => {
-      try {
-        const data = JSON.parse(message.toString());
-        
-        if (data.type === 'pong') {
-          // Heartbeat response
-          return;
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    });
-
     ws.on('close', () => {
       clients.delete(ws);
-      clearInterval(pingInterval);
       console.log(`WebSocket client disconnected. Total clients: ${clients.size}`);
     });
 
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
       clients.delete(ws);
-      clearInterval(pingInterval);
     });
   });
 
