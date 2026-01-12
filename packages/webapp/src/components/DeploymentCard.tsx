@@ -109,6 +109,11 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
   // Image error state
   const [imageError, setImageError] = useState(false);
   
+  // Reset image error when deployment changes
+  useEffect(() => {
+    setImageError(false);
+  }, [deployment.tokenAddress, deployment.currentImageUrl, deployment.tokenImage]);
+  
   // Collapsible panel state for Price through Volume section
   const [isPerformanceOpen, setIsPerformanceOpen] = useState(false);
 
@@ -205,30 +210,48 @@ export function DeploymentCard({ deployment, priority = false }: DeploymentCardP
               </a>
             </div>
             <div className="mt-2 relative w-full aspect-square rounded-lg overflow-hidden bg-black">
-              {(deployment.currentImageUrl || deployment.tokenImage) && !imageError ? (
-                <Image
-                  src={formatIPFSUrl(deployment.currentImageUrl || deployment.tokenImage || '')}
-                  alt={deployment.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                  loading={priority ? "eager" : "lazy"}
-                  priority={priority}
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <div className="relative w-full h-full flex flex-col items-center justify-center">
-                  <Image
-                    src="/fey-logo.svg"
-                    alt="FEY Logo"
-                    width={120}
-                    height={120}
-                    className="opacity-80"
-                    unoptimized
-                  />
-                  <p className="text-[10px] text-white/60 mt-2">no token image</p>
-                </div>
-              )}
+              {(() => {
+                const imageUrl = deployment.currentImageUrl || deployment.tokenImage;
+                const formattedUrl = imageUrl ? formatIPFSUrl(imageUrl) : '';
+                const isValidImageUrl = imageUrl && 
+                  typeof imageUrl === 'string' && 
+                  imageUrl.trim().length > 0 && 
+                  formattedUrl.trim().length > 0 &&
+                  formattedUrl !== 'https://ipfs.io/ipfs/' && // Catch empty IPFS URLs
+                  !imageError;
+                
+                if (isValidImageUrl) {
+                  return (
+                    <Image
+                      src={formattedUrl}
+                      alt={deployment.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                      loading={priority ? "eager" : "lazy"}
+                      priority={priority}
+                      onError={() => {
+                        console.warn('Image failed to load:', formattedUrl);
+                        setImageError(true);
+                      }}
+                    />
+                  );
+                }
+                
+                return (
+                  <div className="relative w-full h-full flex flex-col items-center justify-center bg-black">
+                    <Image
+                      src="/fey-logo.svg"
+                      alt="FEY Logo"
+                      width={120}
+                      height={120}
+                      className="opacity-80"
+                      unoptimized
+                    />
+                    <p className="text-[10px] text-white/60 mt-2">no token image</p>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

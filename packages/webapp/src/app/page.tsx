@@ -140,7 +140,7 @@ export default function HomePage() {
           <div>
             <h1 className="text-3xl font-bold mb-1">FEYDAR</h1>
             <p className="text-sm text-muted-foreground">
-              Monitor new FEY tokens on Base in real-time
+              Look at me, I'm the sniper now
             </p>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default function HomePage() {
             alt="FEYDAR Logo"
             width={64}
             height={64}
-            className="animate-spin mb-4"
+            className="animate-spin-slow mb-4"
             unoptimized
           />
           <p className="text-muted-foreground">Loading Tokens</p>
@@ -222,7 +222,7 @@ export default function HomePage() {
             alt="FEYDAR Logo"
             width={64}
             height={64}
-            className="animate-spin mb-4"
+            className="animate-spin-slow mb-4"
             unoptimized
           />
           <p className="text-muted-foreground">Loading Tokens</p>
