@@ -16,11 +16,14 @@ export function TokenPromo() {
   const [imageError, setImageError] = useState(false);
 
   // Fetch token deployment data
+  // Deployment data rarely changes, so we refetch infrequently
   const { data: deployment, isLoading: isLoadingDeployment, error: deploymentError } = useQuery({
     queryKey: ['deployment', FEYDAR_TOKEN_ADDRESS],
     queryFn: () => fetchDeploymentByAddress(FEYDAR_TOKEN_ADDRESS),
-    refetchInterval: 60000, // Refetch every minute
-    staleTime: 30000, // Consider stale after 30 seconds
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes (deployment data is static)
+    staleTime: 10 * 60 * 1000, // Consider stale after 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   });
   
   // Log errors for debugging
@@ -37,8 +40,10 @@ export function TokenPromo() {
   const { data: priceData, isLoading: isLoadingPrice } = useQuery({
     queryKey: ['tokenPrice', FEYDAR_TOKEN_ADDRESS],
     queryFn: () => fetchTokenPrice(FEYDAR_TOKEN_ADDRESS),
-    refetchInterval: 30000, // Refetch every 30 seconds
-    staleTime: 15000, // Consider stale after 15 seconds
+    refetchInterval: 2 * 60 * 1000, // Refetch every 2 minutes (price updates less frequently)
+    staleTime: 60 * 1000, // Consider stale after 1 minute
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   });
 
   // Use deployment data if available, otherwise use fallback
@@ -59,15 +64,6 @@ export function TokenPromo() {
   
   // Use token image if valid, otherwise fallback to logo
   const tokenImage = isValidImageUrl ? formattedUrl : '/feydar-logo.png';
-  
-  // Debug logging
-  useEffect(() => {
-    if (formattedUrl && isValidImageUrl) {
-      console.log('[TokenPromo] Using image URL:', formattedUrl);
-    } else {
-      console.log('[TokenPromo] Using fallback logo, imageError:', imageError, 'formattedUrl:', formattedUrl);
-    }
-  }, [formattedUrl, isValidImageUrl, imageError]);
 
   return (
     <Card className="mb-6 overflow-hidden">
@@ -83,11 +79,8 @@ export function TokenPromo() {
               unoptimized
               priority
               loading="eager"
-              onLoad={() => {
-                console.log('[TokenPromo] Image loaded successfully:', formattedUrl);
-              }}
               onError={(e) => {
-                console.warn('[TokenPromo] Image failed to load:', formattedUrl, e);
+                console.warn('[TokenPromo] Image failed to load:', formattedUrl);
                 setImageError(true);
               }}
             />
