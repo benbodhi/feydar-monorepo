@@ -34,7 +34,7 @@ export const MAX_PAGE_SIZE = 100;
  */
 export function createTradeLinks(tokenAddress: string) {
   return {
-    fey: `https://www.fey.money/swap/${tokenAddress}`,
+    fey: `https://www.fey.money/tokens/${tokenAddress}`,
     matcha: `https://matcha.xyz/markets/base/${tokenAddress}`,
     uniswap: `https://app.uniswap.org/#/swap?inputCurrency=ETH&outputCurrency=${tokenAddress}&chain=base`,
   };
